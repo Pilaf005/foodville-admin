@@ -12,10 +12,10 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: blob: https://*.r2.dev https://pub-*.r2.dev",
+      "img-src 'self' data: blob: https://*.r2.dev https://pub-*.r2.dev https://images.unsplash.com https://plus.unsplash.com",
       "connect-src 'self'",
       "frame-src 'none'",
       "object-src 'none'",
@@ -33,8 +33,12 @@ const nextConfig = {
     // Remote hosts used by the catalog + avatar imagery.
     remotePatterns: [
       // Cloudflare R2 — primary image CDN for all catalog, category, blog and user images
-      { protocol: "https", hostname: "**.r2.dev" },
-      { protocol: "https", hostname: "**.r2.cloudflarestorage.com" },
+      { protocol: "https", hostname: "*.r2.dev" },
+      { protocol: "https", hostname: "pub-ea082eb584df4a42a07e202cd67dcb02.r2.dev" },
+      { protocol: "https", hostname: "*.cloudflarestorage.com" },
+      // Unsplash hero images
+      { protocol: "https", hostname: "images.unsplash.com" },
+      { protocol: "https", hostname: "plus.unsplash.com" },
       // Google profile pictures (used for SSO avatars if added in future)
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
     ],
