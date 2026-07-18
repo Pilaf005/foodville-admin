@@ -16,7 +16,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https://*.r2.dev https://pub-*.r2.dev https://images.unsplash.com https://plus.unsplash.com",
-      "connect-src 'self'",
+      "connect-src 'self' https://nominatim.openstreetmap.org",
       "frame-src 'none'",
       "object-src 'none'",
       "base-uri 'self'",
