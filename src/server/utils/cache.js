@@ -23,6 +23,9 @@ export function cacheSet(key, value, ttlMs = 60_000) {
 
 /** Read-through helper: returns the cached value or computes + caches it. */
 export async function cached(key, ttlMs, compute) {
+  if (process.env.NODE_ENV === "development") {
+    return await compute();
+  }
   const hit = cacheGet(key);
   if (hit !== undefined) return hit;
   const value = await compute();

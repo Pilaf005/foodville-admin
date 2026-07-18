@@ -108,9 +108,16 @@ export function useAdminMutations() {
   });
 
   const updateOrderStatus = useMutation({
-    mutationFn: ({ orderId, status, note }) => adminService.updateOrderStatus(orderId, status, note),
+    mutationFn: ({ orderId, status, note, deliveryMethod, localDelivery }) =>
+      adminService.updateOrderStatus(orderId, status, note, deliveryMethod, localDelivery),
     onSuccess: () => { invalidateOrders(); toast.success("Order status updated"); },
     onError: (err) => toast.error(err?.message || "Could not update the order."),
+  });
+ 
+  const deleteOrder = useMutation({
+    mutationFn: (orderId) => adminService.deleteOrder(orderId),
+    onSuccess: () => { invalidateOrders(); toast.success("Order deleted"); },
+    onError: (err) => toast.error(err?.message || "Could not delete the order."),
   });
 
   const pushToShiprocket = useMutation({
@@ -187,7 +194,7 @@ export function useAdminMutations() {
 
   return {
     createProduct, updateProduct, deleteProduct,
-    updateOrderStatus,
+    updateOrderStatus, deleteOrder,
     pushToShiprocket, assignShiprocketAWB, getShiprocketLabel,
     createCategory, updateCategory, deleteCategory,
     createBlog, updateBlog, deleteBlog,

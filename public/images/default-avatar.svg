@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <!-- Foodville default profile picture — original artwork, theme palette -->
+  <rect width="192" height="192" fill="#EDE6D9"/>
+  <circle cx="96" cy="74" r="34" fill="#6B7F59"/>
+  <path d="M96 118c-36 0-58 20-58 46v28h116v-28c0-26-22-46-58-46z" fill="#6B7F59"/>
+  <circle cx="96" cy="74" r="34" fill="none" stroke="#FAF7F2" stroke-width="4"/>
+  <path d="M96 118c-36 0-58 20-58 46v28h116v-28c0-26-22-46-58-46z" fill="none" stroke="#FAF7F2" stroke-width="4"/>
+</svg>

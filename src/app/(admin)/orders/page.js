@@ -2,9 +2,10 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { useAdminOrders } from "@/features/admin/hooks/useAdmin";
+import { useAdminOrders, useAdminMutations } from "@/features/admin/hooks/useAdmin";
 import { useQueryClient } from "@tanstack/react-query";
 import AdminBadge from "@/features/admin/components/ui/AdminBadge";
+import ConfirmDialog from "@/features/admin/components/ui/ConfirmDialog";
 import { queryKeys } from "@/lib/queryKeys";
 
 const ORDER_STATUSES = ["placed", "confirmed", "shipped", "delivered", "cancelled"];
@@ -19,8 +20,17 @@ const ic = "border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 pl
 export default function AdminOrdersPage() {
   const qc = useQueryClient();
   const { orders, isLoading, refetch } = useAdminOrders({ limit: 200 });
+  const { deleteOrder } = useAdminMutations();
   const [statusFilter, setStatusFilter] = useState("all");
   const [search,       setSearch]       = useState("");
+  const [deleteTarget, setDeleteTarget] = useState(null);
+ 
+  function handleDeleteConfirm() {
+    if (!deleteTarget) return;
+    deleteOrder.mutate(deleteTarget.orderId, {
+      onSuccess: () => setDeleteTarget(null),
+    });
+  }
 
   const filtered = useMemo(() =>
     orders
@@ -100,8 +110,16 @@ export default function AdminOrdersPage() {
                           <p className="text-[10px] text-gray-400 mt-0.5">{PAYMENT_LABEL[o.paymentMethod] ?? o.paymentMethod}</p>
                         </td>
                         <td className="px-4 py-3"><AdminBadge variant={STATUS_VARIANT[o.status] ?? "gray"} dot>{o.status}</AdminBadge></td>
-                        <td className="px-4 py-3">
-                          <Link href={`/orders/${o.orderId}`} className="text-xs font-bold text-[#6B7F59] hover:underline whitespace-nowrap">View</Link>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="flex items-center gap-3">
+                            <Link href={`/orders/${o.orderId}`} className="text-xs font-bold text-[#6B7F59] hover:underline">View</Link>
+                            <button
+                              onClick={() => setDeleteTarget(o)}
+                              className="text-xs font-bold text-red-500 hover:underline cursor-pointer bg-transparent border-none p-0 active:scale-95 transition"
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -110,6 +128,15 @@ export default function AdminOrdersPage() {
           </table>
         </div>
       </div>
+ 
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        title="Delete Order"
+        message={`Are you sure you want to delete order "${deleteTarget?.orderId}"? This will permanently remove the order and all associated gateway payment logs.`}
+        confirmLabel="Delete Order"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

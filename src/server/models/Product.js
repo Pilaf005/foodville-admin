@@ -59,6 +59,7 @@ const ProductSchema = new Schema(
     name: { type: String, required: true, trim: true },
 
     category: { type: String, required: true, enum: PRODUCT_CATEGORIES, index: true },
+    extraCategories: { type: [String], default: [], index: true },
     shopBy: { type: String, enum: SHOP_BY_VALUES, index: true }, // absent on combos/bulk
 
     unit: { type: String, default: "" }, // default/selected unit label
@@ -107,5 +108,8 @@ ProductSchema.virtual("id").get(function () {
   return this.numericId;
 });
 
+if (process.env.NODE_ENV === "development" && mongoose.models.Product) {
+  delete mongoose.models.Product;
+}
 const Product = mongoose.models.Product || mongoose.model("Product", ProductSchema);
 export default Product;

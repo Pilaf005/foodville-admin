@@ -7,6 +7,7 @@ import { useImageUpload } from "@/features/profile/hooks/useProfile";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Skeleton } from "@/components/feedback/Skeleton";
 import Modal from "@/components/ui/Modal";
+import ConfirmDialog from "@/features/admin/components/ui/ConfirmDialog";
 
 function Pagination({ meta, page, setPage }) {
   if (!meta || meta.totalPages <= 1) return null;
@@ -62,6 +63,7 @@ export default function AdminBlogsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState(null);
+  const [deleting, setDeleting] = useState(null);
   const debounced = useDebounce(search.trim(), 300);
 
   const { blogs, meta, isPending } = useAdminBlogs({
@@ -122,11 +124,7 @@ export default function AdminBlogsPage() {
                     Edit
                   </button>
                   <button
-                    onClick={() => {
-                      if (confirm(`Delete "${b.title}"? Its cover image will be removed too.`)) {
-                        deleteBlog.mutate(b.id);
-                      }
-                    }}
+                    onClick={() => setDeleting(b)}
                     className="rounded-xl border border-red-200 px-3 py-1.5 text-[11px] font-bold text-red-500 transition hover:bg-red-50"
                   >
                     Delete
@@ -141,6 +139,18 @@ export default function AdminBlogsPage() {
       {meta && meta.totalPages > 1 && <Pagination meta={meta} page={page} setPage={setPage} />}
 
       {editing && <BlogModal blog={editing} onClose={() => setEditing(null)} />}
+ 
+      <ConfirmDialog
+        isOpen={!!deleting}
+        title="Delete Article"
+        message={`Are you sure you want to delete "${deleting?.title}"? Its cover image will be removed permanently too.`}
+        confirmLabel="Delete Article"
+        onConfirm={() => {
+          deleteBlog.mutate(deleting.id);
+          setDeleting(null);
+        }}
+        onCancel={() => setDeleting(null)}
+      />
     </div>
   );
 }

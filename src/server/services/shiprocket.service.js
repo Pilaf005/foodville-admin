@@ -98,14 +98,7 @@ function formatShiprocketDate(date) {
  * Creates a shipment order on Shiprocket.
  */
 export async function createShiprocketOrder(order, { weight, length, width, height }) {
-  const pickupLocation = env.shiprocket.pickupLocation;
-  if (!pickupLocation) {
-    throw new AppError(
-      "Shiprocket pickup location is not configured. Set SHIPROCKET_PICKUP_LOCATION.",
-      503,
-      "SHIPROCKET_NO_PICKUP_LOCATION"
-    );
-  }
+  const pickupLocation = env.shiprocket.pickupLocation || "Primary";
 
   // Format order items for Shiprocket
   const orderItems = order.items.map((item) => ({

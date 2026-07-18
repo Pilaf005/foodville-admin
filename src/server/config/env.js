@@ -49,7 +49,7 @@ class EnvConfig {
 
         // Auth / JWT
         jwtSecret: requireVar("JWT_SECRET"),
-        jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
+        jwtExpiresIn: process.env.JWT_EXPIRES_IN || "2d",
         authCookieName: process.env.AUTH_COOKIE_NAME || "fv_token",
 
         // OTP
@@ -91,6 +91,7 @@ class EnvConfig {
           email: process.env.SHIPROCKET_EMAIL || "",
           password: process.env.SHIPROCKET_PASSWORD || "",
           pickupLocation: process.env.SHIPROCKET_PICKUP_LOCATION || "",
+          pickupPostcode: process.env.SHIPROCKET_PICKUP_POSTCODE || "122098",
         },
       };
     }

@@ -5,16 +5,17 @@ import Link from "next/link";
 import { useAdminOrders, useAdminMutations, useShiprocketTracking } from "@/features/admin/hooks/useAdmin";
 import AdminBadge from "@/features/admin/components/ui/AdminBadge";
 
-const ORDER_STATUSES = ["placed", "confirmed", "shipped", "delivered", "cancelled"];
-const STATUS_VARIANT = { delivered: "green", shipped: "blue", confirmed: "olive", placed: "amber", cancelled: "red" };
-
+const ORDER_STATUSES = ["placed", "confirmed", "shipped", "out_for_delivery", "delivered", "cancelled"];
+const STATUS_VARIANT = { delivered: "green", out_for_delivery: "blue", shipped: "blue", confirmed: "olive", placed: "amber", cancelled: "red" };
+ 
 const TIMELINE_STEPS = [
-  { key: "placed",    label: "Order Placed", sub: "Customer submitted the order" },
-  { key: "confirmed", label: "Confirmed",    sub: "Order accepted & being prepared" },
-  { key: "shipped",   label: "Shipped",      sub: "Package handed to delivery" },
-  { key: "delivered", label: "Delivered",    sub: "Package received by customer" },
+  { key: "placed",           label: "Order Placed",     sub: "Customer submitted the order" },
+  { key: "confirmed",        label: "Confirmed",        sub: "Order accepted & being prepared" },
+  { key: "shipped",          label: "Shipped",          sub: "Package handed to delivery" },
+  { key: "out_for_delivery", label: "Out for Delivery", sub: "Package is out with delivery agent" },
+  { key: "delivered",        label: "Delivered",        sub: "Package received by customer" },
 ];
-const STEP_ORDER     = ["placed", "confirmed", "shipped", "delivered"];
+const STEP_ORDER     = ["placed", "confirmed", "shipped", "out_for_delivery", "delivered"];
 
 function fmt(n)     { return "₹" + Number(n).toLocaleString("en-IN"); }
 function fmtDate(d) { return d ? new Date(d).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"; }
@@ -35,6 +36,9 @@ export default function AdminOrderDetailPage({ params: paramsPromise }) {
   const [length, setLength] = useState("15");
   const [width, setWidth] = useState("15");
   const [height, setHeight] = useState("10");
+  const [shippingTab, setShippingTab] = useState(order?.shipping?.deliveryMethod || "shiprocket");
+  const [deliveryBoyName, setDeliveryBoyName] = useState(order?.shipping?.localDelivery?.deliveryBoyName || "");
+  const [deliveryBoyPhone, setDeliveryBoyPhone] = useState(order?.shipping?.localDelivery?.deliveryBoyPhone || "");
 
   if (isLoading) {
     return <div className="p-10 text-center text-sm text-gray-400 animate-pulse">Loading order…</div>;
@@ -59,11 +63,31 @@ export default function AdminOrderDetailPage({ params: paramsPromise }) {
 
   return (
     <div className="space-y-5 max-w-5xl">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-xs text-gray-400">
-        <Link href="/orders" className="hover:text-[#6B7F59] transition font-semibold">Orders</Link>
-        <span>/</span>
-        <span className="text-gray-700 font-bold">{order.orderId}</span>
+      {/* Breadcrumb & Header Actions */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs text-gray-400">
+          <Link href="/orders" className="hover:text-[#6B7F59] transition font-semibold">Orders</Link>
+          <span>/</span>
+          <span className="text-gray-700 font-bold">{order.orderId}</span>
+        </div>
+        {order.shipping?.shiprocketOrderId ? (
+          <button
+            disabled
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 bg-gray-50 text-xs font-bold text-gray-405 cursor-not-allowed opacity-60"
+            title="Invoice is managed by Shiprocket"
+          >
+            🖨️ Print Invoice
+          </button>
+        ) : (
+          <a
+            href={`/invoice/${order.orderId}`}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-xs font-bold text-gray-700 transition shadow-sm cursor-pointer active:scale-95"
+          >
+            🖨️ Print Invoice
+          </a>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -192,130 +216,281 @@ export default function AdminOrderDetailPage({ params: paramsPromise }) {
 
       {/* Shipping & Update Status Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {/* Shiprocket Shipping Panel */}
+        {/* Shipping Panel */}
         {order.status !== "cancelled" && (
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden h-fit">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-              <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight">Shiprocket Shipping</h3>
-              {order.shipping?.shiprocketShipmentId && (
+            {/* Header with Switch Tabs if not shipped yet */}
+            {(!order.shipping?.shiprocketOrderId && order.shipping?.deliveryMethod !== "local") ? (
+              <div className="border-b border-gray-150 flex bg-gray-50/50">
+                <button
+                  onClick={() => setShippingTab("shiprocket")}
+                  className={`flex-1 py-3 text-xs font-black uppercase tracking-wider border-b-2 transition cursor-pointer ${
+                    shippingTab === "shiprocket"
+                      ? "border-[#6B7F59] text-gray-950 bg-white font-black"
+                      : "border-transparent text-gray-400 hover:text-gray-600 font-semibold"
+                  }`}
+                >
+                  🚀 Shiprocket Courier
+                </button>
+                <button
+                  onClick={() => setShippingTab("local")}
+                  className={`flex-1 py-3 text-xs font-black uppercase tracking-wider border-b-2 transition cursor-pointer ${
+                    shippingTab === "local"
+                      ? "border-[#6B7F59] text-gray-950 bg-white font-black"
+                      : "border-transparent text-gray-400 hover:text-gray-600 font-semibold"
+                  }`}
+                >
+                  📍 Local Delivery
+                </button>
+              </div>
+            ) : (
+              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight">
+                  {order.shipping?.deliveryMethod === "local" ? "📍 Local Hand Delivery" : "🚀 Shiprocket Shipping"}
+                </h3>
                 <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-bold text-blue-700 ring-1 ring-inset ring-blue-700/10">
                   Active
                 </span>
-              )}
-            </div>
+              </div>
+            )}
+ 
             <div className="px-5 py-4 space-y-4">
-              {!order.shipping?.shiprocketOrderId ? (
-                /* Form to push to Shiprocket */
-                <div className="space-y-3">
-                  <p className="text-[11px] text-gray-400">
-                    Enter package details to register this shipment on Shiprocket.
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Weight (kg)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={weight}
-                        onChange={(e) => setWeight(e.target.value)}
-                        className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs focus:ring-[#6B7F59]"
-                      />
+              {/* IF LOCAL DELIVERY IS ACTIVE (EITHER AS TAB OR COMMITTED METHOD) */}
+              {(order.shipping?.deliveryMethod === "local" || (!order.shipping?.shiprocketOrderId && shippingTab === "local")) ? (
+                /* Local Delivery Layout */
+                order.shipping?.deliveryMethod === "local" ? (
+                  /* Committed Local Delivery Info & Manual Control Buttons */
+                  <div className="space-y-4 animate-fade-in">
+                    <div className="text-xs text-gray-600 space-y-2 bg-gray-50 p-4 rounded-xl border border-gray-150">
+                      <div className="flex justify-between">
+                        <span>Delivery Executive:</span>
+                        <span className="font-bold text-gray-950">
+                          {order.shipping?.localDelivery?.deliveryBoyName || "—"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Agent Contact:</span>
+                        <span className="font-bold text-gray-950">
+                          {order.shipping?.localDelivery?.deliveryBoyPhone || "—"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Delivery Status:</span>
+                        <span className="font-mono font-bold capitalize text-[#6B7F59]">
+                          {order.status}
+                        </span>
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Length (cm)</label>
-                      <input
-                        type="number"
-                        value={length}
-                        onChange={(e) => setLength(e.target.value)}
-                        className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs focus:ring-[#6B7F59]"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Width (cm)</label>
-                      <input
-                        type="number"
-                        value={width}
-                        onChange={(e) => setWidth(e.target.value)}
-                        className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs focus:ring-[#6B7F59]"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Height (cm)</label>
-                      <input
-                        type="number"
-                        value={height}
-                        onChange={(e) => setHeight(e.target.value)}
-                        className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs focus:ring-[#6B7F59]"
-                      />
-                    </div>
-                  </div>
-                  <button
-                    onClick={() =>
-                      pushToShiprocket.mutate({
-                        orderId: order.orderId,
-                        dimensions: { weight, length, width, height },
-                      })
-                    }
-                    disabled={pushToShiprocket.isPending || order.paymentMethod === "razorpay" && order.paymentStatus !== "paid"}
-                    className="w-full bg-[#6B7F59] hover:bg-[#5A6C4A] text-white py-2 rounded-xl text-xs font-bold transition disabled:opacity-50"
-                  >
-                    {pushToShiprocket.isPending ? "REGISTERING..." : "PUSH TO SHIPROCKET"}
-                  </button>
-                </div>
-              ) : !order.shipping?.awbCode ? (
-                /* Order pushed but no AWB booked */
-                <div className="space-y-3">
-                  <div className="text-xs text-gray-600 space-y-1 bg-gray-50 p-3 rounded-xl border border-gray-150">
-                    <div className="flex justify-between">
-                      <span>Shiprocket ID:</span>
-                      <span className="font-bold text-gray-900">{order.shipping.shiprocketOrderId}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Shipment ID:</span>
-                      <span className="font-bold text-gray-900">{order.shipping.shiprocketShipmentId}</span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => assignShiprocketAWB.mutate(order.orderId)}
-                    disabled={assignShiprocketAWB.isPending}
-                    className="w-full bg-[#6B7F59] hover:bg-[#5A6C4A] text-white py-2 rounded-xl text-xs font-bold transition disabled:opacity-50"
-                  >
-                    {assignShiprocketAWB.isPending ? "BOOKING COURIER..." : "GENERATE AWB & PICKUP"}
-                  </button>
-                </div>
-              ) : (
-                /* Shipped: tracking active and print labels available */
-                <div className="space-y-3">
-                  <div className="text-xs text-gray-600 space-y-1 bg-gray-50 p-3 rounded-xl border border-gray-150">
-                    <div className="flex justify-between">
-                      <span>Courier:</span>
-                      <span className="font-bold text-gray-900">{order.shipping.courierName}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>AWB Tracking:</span>
-                      <span className="font-bold text-gray-900">{order.shipping.awbCode}</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => getShiprocketLabel.mutate(order.orderId)}
-                      disabled={getShiprocketLabel.isPending}
-                      className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200 py-2 rounded-xl text-xs font-bold transition disabled:opacity-50"
-                    >
-                      {getShiprocketLabel.isPending ? "LOADING..." : "PRINT LABEL"}
-                    </button>
-                    {order.shipping.labelUrl && (
+ 
+                    {/* Local Delivery Flow Control buttons */}
+                    <div className="space-y-2">
                       <a
-                        href={order.shipping.labelUrl}
+                        href={`/invoice/${order.orderId}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex-1 bg-[#6B7F59] hover:bg-[#5A6C4A] text-white text-center py-2 rounded-xl text-xs font-bold transition inline-block"
+                        className="w-full bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-800 text-center py-2 rounded-xl text-xs font-bold transition inline-block cursor-pointer mb-1 shadow-sm uppercase tracking-wide"
                       >
-                        DOWNLOAD PDF
+                        🖨️ Print Local Invoice
                       </a>
-                    )}
+                      {order.status === "shipped" && (
+                        <button
+                          onClick={() =>
+                            updateOrderStatus.mutate({
+                              orderId: order.orderId,
+                              status: "out_for_delivery",
+                            })
+                          }
+                          disabled={updateOrderStatus.isPending}
+                          className="w-full bg-[#6B7F59] hover:bg-[#5A6C4A] text-white py-2 rounded-xl text-xs font-bold transition cursor-pointer disabled:opacity-50"
+                        >
+                          {updateOrderStatus.isPending ? "UPDATING..." : "MARK OUT FOR DELIVERY"}
+                        </button>
+                      )}
+ 
+                      {(order.status === "shipped" || order.status === "out_for_delivery") && (
+                        <button
+                          onClick={() =>
+                            updateOrderStatus.mutate({
+                              orderId: order.orderId,
+                              status: "delivered",
+                            })
+                          }
+                          disabled={updateOrderStatus.isPending}
+                          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-xl text-xs font-bold transition cursor-pointer disabled:opacity-50"
+                        >
+                          {updateOrderStatus.isPending ? "UPDATING..." : "MARK DELIVERED"}
+                        </button>
+                      )}
+ 
+                      {order.status === "delivered" && (
+                        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-center rounded-xl text-xs font-bold">
+                          🎉 Order successfully delivered locally!
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  /* Form to Dispatch Locally */
+                  <div className="space-y-4 animate-fade-in">
+                    <p className="text-[11px] text-gray-400">
+                      Enter delivery agent info below to dispatch this order locally.
+                    </p>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Delivery Agent Name</label>
+                        <input
+                          type="text"
+                          value={deliveryBoyName}
+                          onChange={(e) => setDeliveryBoyName(e.target.value)}
+                          placeholder="e.g. Ramesh Kumar"
+                          className="w-full rounded-lg border border-gray-205 px-3 py-1.5 text-xs focus:ring-[#6B7F59] focus:outline-none bg-gray-50"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Agent Phone Number</label>
+                        <input
+                          type="text"
+                          value={deliveryBoyPhone}
+                          onChange={(e) => setDeliveryBoyPhone(e.target.value)}
+                          placeholder="e.g. +91 9876543210"
+                          className="w-full rounded-lg border border-gray-205 px-3 py-1.5 text-xs focus:ring-[#6B7F59] focus:outline-none bg-gray-50"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      onClick={() =>
+                        updateOrderStatus.mutate({
+                          orderId: order.orderId,
+                          status: "shipped",
+                          deliveryMethod: "local",
+                          localDelivery: {
+                            deliveryBoyName,
+                            deliveryBoyPhone,
+                          },
+                        })
+                      }
+                      disabled={updateOrderStatus.isPending || order.shipping?.deliveryMethod === "local" || order.paymentMethod === "razorpay" && order.paymentStatus !== "paid"}
+                      className="w-full bg-[#6B7F59] hover:bg-[#5A6C4A] text-white py-2 rounded-xl text-xs font-bold transition cursor-pointer disabled:opacity-50"
+                    >
+                      {updateOrderStatus.isPending ? "DISPATCHING..." : "DISPATCH LOCALLY"}
+                    </button>
+                  </div>
+                )
+              ) : (
+                /* Shiprocket Layout */
+                !order.shipping?.shiprocketOrderId ? (
+                  /* Form to push to Shiprocket */
+                  <div className="space-y-3 animate-fade-in">
+                    <p className="text-[11px] text-gray-400">
+                      Enter package details to register this shipment on Shiprocket.
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Weight (kg)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={weight}
+                          onChange={(e) => setWeight(e.target.value)}
+                          className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs focus:ring-[#6B7F59]"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Length (cm)</label>
+                        <input
+                          type="number"
+                          value={length}
+                          onChange={(e) => setLength(e.target.value)}
+                          className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs focus:ring-[#6B7F59]"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Width (cm)</label>
+                        <input
+                          type="number"
+                          value={width}
+                          onChange={(e) => setWidth(e.target.value)}
+                          className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs focus:ring-[#6B7F59]"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Height (cm)</label>
+                        <input
+                          type="number"
+                          value={height}
+                          onChange={(e) => setHeight(e.target.value)}
+                          className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs focus:ring-[#6B7F59]"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      onClick={() =>
+                        pushToShiprocket.mutate({
+                          orderId: order.orderId,
+                          dimensions: { weight, length, width, height },
+                        })
+                      }
+                      disabled={pushToShiprocket.isPending || !!order.shipping?.shiprocketOrderId || order.paymentMethod === "razorpay" && order.paymentStatus !== "paid"}
+                      className="w-full bg-[#6B7F59] hover:bg-[#5A6C4A] text-white py-2 rounded-xl text-xs font-bold transition cursor-pointer disabled:opacity-50"
+                    >
+                      {pushToShiprocket.isPending ? "REGISTERING..." : "PUSH TO SHIPROCKET"}
+                    </button>
+                  </div>
+                ) : !order.shipping?.awbCode ? (
+                  /* Order pushed but no AWB booked */
+                  <div className="space-y-3 animate-fade-in">
+                    <div className="text-xs text-gray-600 space-y-1 bg-gray-50 p-3 rounded-xl border border-gray-150">
+                      <div className="flex justify-between">
+                        <span>Shiprocket ID:</span>
+                        <span className="font-bold text-gray-900">{order.shipping.shiprocketOrderId}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Shipment ID:</span>
+                        <span className="font-bold text-gray-900">{order.shipping.shiprocketShipmentId}</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => assignShiprocketAWB.mutate(order.orderId)}
+                      disabled={assignShiprocketAWB.isPending}
+                      className="w-full bg-[#6B7F59] hover:bg-[#5A6C4A] text-white py-2 rounded-xl text-xs font-bold transition cursor-pointer disabled:opacity-50"
+                    >
+                      {assignShiprocketAWB.isPending ? "BOOKING COURIER..." : "GENERATE AWB & PICKUP"}
+                    </button>
+                  </div>
+                ) : (
+                  /* Shipped: tracking active and print labels available */
+                  <div className="space-y-3 animate-fade-in">
+                    <div className="text-xs text-gray-600 space-y-1 bg-gray-50 p-3 rounded-xl border border-gray-150">
+                      <div className="flex justify-between">
+                        <span>Courier:</span>
+                        <span className="font-bold text-gray-900">{order.shipping.courierName}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>AWB Tracking:</span>
+                        <span className="font-bold text-gray-900">{order.shipping.awbCode}</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => getShiprocketLabel.mutate(order.orderId)}
+                        disabled={getShiprocketLabel.isPending}
+                        className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200 py-2 rounded-xl text-xs font-bold transition cursor-pointer disabled:opacity-50"
+                      >
+                        {getShiprocketLabel.isPending ? "LOADING..." : "PRINT LABEL"}
+                      </button>
+                      {order.shipping.labelUrl && (
+                        <a
+                          href={order.shipping.labelUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex-1 bg-[#6B7F59] hover:bg-[#5A6C4A] text-white text-center py-2 rounded-xl text-xs font-bold transition inline-block cursor-pointer"
+                        >
+                          DOWNLOAD PDF
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )
               )}
             </div>
           </div>
@@ -430,13 +605,14 @@ function ShipmentTrackingCard({ orderId, shiprocketOrderId, awbCode }) {
 function EditableTimeline({ order, oid, updateStatus }) {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [revertStep, setRevertStep] = useState(null);
-
+ 
   const isCancelled = order.status === "cancelled";
   const currentIdx  = STEP_ORDER.indexOf(order.status);
-
+  const isShiprocketActive = order.shipping?.deliveryMethod === "shiprocket" && !!order.shipping?.shiprocketOrderId;
+ 
   function handleCheckboxClick(step, stepIdx) {
-    if (isCancelled || updateStatus.isPending) return;
-
+    if (isCancelled || updateStatus.isPending || isShiprocketActive) return;
+ 
     if (stepIdx === currentIdx) {
       if (currentIdx > 0) setRevertStep(TIMELINE_STEPS[currentIdx - 1]);
     } else if (stepIdx < currentIdx) {
@@ -445,19 +621,19 @@ function EditableTimeline({ order, oid, updateStatus }) {
       updateStatus.mutate({ orderId: oid, status: step.key });
     }
   }
-
+ 
   function handleRevertConfirm() {
     updateStatus.mutate({ orderId: oid, status: revertStep.key }, {
       onSettled: () => setRevertStep(null),
     });
   }
-
+ 
   function handleCancelConfirm() {
     updateStatus.mutate({ orderId: oid, status: "cancelled" }, {
       onSettled: () => setCancelOpen(false),
     });
   }
-
+ 
   return (
     <>
       <div className="space-y-1">
@@ -467,7 +643,7 @@ function EditableTimeline({ order, oid, updateStatus }) {
           const isActive   = !isCancelled && stepIdx === currentIdx;
           const isNext     = !isCancelled && stepIdx === currentIdx + 1;
           const isFuture   = stepIdx > currentIdx + 1;
-          const isClickable = !isCancelled && !isFuture && !updateStatus.isPending;
+          const isClickable = !isCancelled && !isFuture && !updateStatus.isPending && !isShiprocketActive;
 
           return (
             <button
@@ -527,7 +703,17 @@ function EditableTimeline({ order, oid, updateStatus }) {
             </button>
           );
         })}
-
+ 
+        {isShiprocketActive && (
+          <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-blue-100 bg-blue-50 text-blue-700 animate-fade-in">
+            <span className="shrink-0 text-base">🤖</span>
+            <div>
+              <p className="text-xs font-bold">Automatic Status Tracking</p>
+              <p className="text-[10px] text-blue-500 font-medium">This order is shipped via Shiprocket. Status transitions are synchronized automatically.</p>
+            </div>
+          </div>
+        )}
+ 
         {/* Cancelled row */}
         {isCancelled && (
           <div className="flex items-center gap-4 px-4 py-3 rounded-2xl border border-red-200 bg-red-50">

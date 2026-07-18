@@ -46,8 +46,8 @@ export const POST = withRoute(async (req) => {
   const file = form.get("file");
   if (!file || typeof file.arrayBuffer !== "function") throw badRequest("No file was uploaded.");
 
-  const folder = String(form.get("folder") || "");
-  const ownerId = authorizeTarget(auth, folder, String(form.get("ownerId") || ""));
+  const folder = String(form.get("folder") || "products");
+  const ownerId = authorizeTarget(auth, folder, String(form.get("ownerId") || "catalog"));
   const replaceUrl = form.get("replaceUrl") ? String(form.get("replaceUrl")) : null;
 
   const buffer = Buffer.from(await file.arrayBuffer());

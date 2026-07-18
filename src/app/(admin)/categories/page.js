@@ -1,15 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAdminCategories, useAdminMutations } from "@/features/admin/hooks/useAdmin";
 import ConfirmDialog from "@/features/admin/components/ui/ConfirmDialog";
 import ImageUploadField from "@/features/admin/components/ui/ImageUploadField";
 
+const slugify = (s) =>
+  String(s)
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+ 
 const EMPTY_FORM = { slug: "", name: "", image: "" };
 
 function CategoryModal({ isOpen, initial, onClose, onSave, isPending }) {
-  const [form, setForm] = useState(initial ? { slug: initial.slug, name: initial.name, image: initial.image || "" } : EMPTY_FORM);
+  const [form, setForm] = useState(initial ? { slug: initial.slug, name: initial.name, image: initial.image || "" } : { slug: "", name: "", image: "" });
+  const [isSlugManual, setIsSlugManual] = useState(!!initial);
+ 
+  useEffect(() => {
+    if (isOpen) {
+      setForm(initial ? { slug: initial.slug, name: initial.name, image: initial.image || "" } : { slug: "", name: "", image: "" });
+      setIsSlugManual(!!initial);
+    }
+  }, [initial, isOpen]);
+ 
   if (!isOpen) return null;
+ 
+  function handleNameChange(nameVal) {
+    setForm((p) => {
+      const next = { ...p, name: nameVal };
+      if (!initial && !isSlugManual) {
+        next.slug = slugify(nameVal);
+      }
+      return next;
+    });
+  }
 
   function handleSave(e) {
     e.preventDefault();
@@ -37,11 +64,11 @@ function CategoryModal({ isOpen, initial, onClose, onSave, isPending }) {
         <form onSubmit={handleSave} className="p-5 space-y-4">
           <div className="space-y-1.5">
             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Category Name <span className="text-red-400">*</span></label>
-            <input required type="text" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="e.g. Spice Powders" className={ic} />
+            <input required type="text" value={form.name} onChange={(e) => handleNameChange(e.target.value)} placeholder="e.g. Spice Powders" className={ic} />
           </div>
           <div className="space-y-1.5">
             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Slug</label>
-            <input type="text" value={form.slug} onChange={(e) => setForm((p) => ({ ...p, slug: e.target.value }))} placeholder="auto-generated from name" className={ic} />
+            <input type="text" value={form.slug} onChange={(e) => { setIsSlugManual(true); setForm((p) => ({ ...p, slug: slugify(e.target.value) })); }} placeholder="auto-generated from name" className={ic} />
           </div>
           <ImageUploadField
             label="Category Image"
@@ -129,13 +156,15 @@ export default function AdminCategoriesPage() {
         </div>
       )}
 
-      <CategoryModal
-        isOpen={modal !== null}
-        initial={modal === "add" ? null : modal}
-        onClose={() => setModal(null)}
-        onSave={handleSave}
-        isPending={createCategory.isPending || updateCategory.isPending}
-      />
+      {modal !== null && (
+        <CategoryModal
+          isOpen={modal !== null}
+          initial={modal === "add" ? null : modal}
+          onClose={() => setModal(null)}
+          onSave={handleSave}
+          isPending={createCategory.isPending || updateCategory.isPending}
+        />
+      )}
 
       <ConfirmDialog
         isOpen={deleteTarget !== null}

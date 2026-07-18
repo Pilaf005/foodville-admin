@@ -23,8 +23,11 @@ export const adminService = {
     const res = await api.get("/admin/orders", { params });
     return { items: res.data?.data ?? [], meta: res.data?.meta ?? null };
   },
-  async updateOrderStatus(orderId, status, note) {
-    return unwrap(await api.patch(`/admin/orders/${orderId}`, { status, note }));
+  async updateOrderStatus(orderId, status, note, deliveryMethod, localDelivery) {
+    return unwrap(await api.patch(`/admin/orders/${orderId}`, { status, note, deliveryMethod, localDelivery }));
+  },
+  async deleteOrder(orderId) {
+    return unwrap(await api.delete(`/admin/orders/${orderId}`));
   },
 
   async pushToShiprocket(orderId, dimensions) {

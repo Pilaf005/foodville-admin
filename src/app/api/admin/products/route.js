@@ -13,7 +13,7 @@ export const GET = withRoute(async (req) => {
     search: sp.get("search") || undefined,
     category: sp.get("category") || undefined,
     page: Math.max(1, Number(sp.get("page")) || 1),
-    limit: Math.min(100, Number(sp.get("limit")) || 20),
+    limit: Math.min(1000, Number(sp.get("limit")) || 20),
   });
   return ok(result.items, { meta: result.meta });
 });

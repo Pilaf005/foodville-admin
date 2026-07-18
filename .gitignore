@@ -39,3 +39,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS metadata
+[Dd]esktop.ini
+Thumbs.db
+
+# Temp / Scratch files
+/scratch/
+/tmp/
+/temp/
+

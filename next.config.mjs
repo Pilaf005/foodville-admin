@@ -8,6 +8,21 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self)" },
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+  {
+    key: "Content-Security-Policy",
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com",
+      "img-src 'self' data: blob: https://*.r2.dev https://pub-*.r2.dev",
+      "connect-src 'self'",
+      "frame-src 'none'",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join("; "),
+  },
 ];
 
 const nextConfig = {
@@ -17,14 +32,11 @@ const nextConfig = {
   images: {
     // Remote hosts used by the catalog + avatar imagery.
     remotePatterns: [
-      { protocol: "https", hostname: "images.unsplash.com" },
-      { protocol: "https", hostname: "i.pinimg.com" },
-      { protocol: "https", hostname: "media.istockphoto.com" },
-      { protocol: "https", hostname: "res.cloudinary.com" },
-      { protocol: "https", hostname: "lh3.googleusercontent.com" },
-      // Cloudflare R2 (public bucket URL + any custom domain we add later)
+      // Cloudflare R2 — primary image CDN for all catalog, category, blog and user images
       { protocol: "https", hostname: "**.r2.dev" },
       { protocol: "https", hostname: "**.r2.cloudflarestorage.com" },
+      // Google profile pictures (used for SSO avatars if added in future)
+      { protocol: "https", hostname: "lh3.googleusercontent.com" },
     ],
     formats: ["image/avif", "image/webp"],
   },

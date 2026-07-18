@@ -93,6 +93,11 @@ const OrderSchema = new Schema(
     timeline: { type: [TimelineEntrySchema], default: [] },
 
     shipping: {
+      deliveryMethod: { type: String, enum: ["shiprocket", "local"], default: "shiprocket" },
+      localDelivery: {
+        deliveryBoyName: { type: String, default: "" },
+        deliveryBoyPhone: { type: String, default: "" },
+      },
       shiprocketOrderId: { type: String },
       shiprocketShipmentId: { type: String },
       awbCode: { type: String, index: true },
@@ -107,6 +112,7 @@ const OrderSchema = new Schema(
       }
     },
 
+    isDraft: { type: Boolean, default: false, index: true },
     placedAt: { type: Date, default: Date.now, index: true },
   },
   { timestamps: true }

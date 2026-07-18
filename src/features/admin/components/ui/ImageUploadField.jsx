@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 /**
  * ImageUploadField
- * Adapted for Foodville-Admin: uploads files via the /api/uploads R2 endpoint.
+ * Uploads files via the /api/uploads R2 storage endpoint.
  */
 export default function ImageUploadField({
   value,
@@ -12,14 +12,38 @@ export default function ImageUploadField({
   label = "Image",
   required = false,
   previewSize = "md",
+  folder = "products",
+  ownerId = "catalog",
 }) {
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const inputRef = useRef(null);
 
   const preview = value || null;
   const thumbCls = previewSize === "sm" ? "w-16 h-16" : "w-24 h-24";
+
+  // Global paste handler active only when hovering over this field
+  useEffect(() => {
+    function handleGlobalPaste(e) {
+      if (!isHovered || uploading) return;
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) {
+            e.preventDefault();
+            processFile(file);
+            break;
+          }
+        }
+      }
+    }
+    window.addEventListener("paste", handleGlobalPaste);
+    return () => window.removeEventListener("paste", handleGlobalPaste);
+  }, [isHovered, uploading]);
 
   async function processFile(file) {
     setError("");
@@ -36,6 +60,10 @@ export default function ImageUploadField({
     try {
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("folder", folder || "products");
+      formData.append("ownerId", ownerId || "catalog");
+      if (value) formData.append("replaceUrl", value);
+
       const res = await fetch("/api/uploads", { method: "POST", body: formData });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error?.message || "Upload failed.");
@@ -76,9 +104,11 @@ export default function ImageUploadField({
           onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
           onDragLeave={() => setDragging(false)}
           onDrop={handleDrop}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
           onClick={() => !uploading && inputRef.current?.click()}
           className={`relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-150 p-6 ${
-            dragging
+            dragging || isHovered
               ? "border-[#6B7F59] bg-[#6B7F59]/5"
               : "border-gray-200 bg-gray-50 hover:border-[#6B7F59]/60 hover:bg-[#6B7F59]/3"
           } ${uploading ? "opacity-60 cursor-wait" : ""}`}
@@ -89,7 +119,7 @@ export default function ImageUploadField({
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
               </svg>
-              <p className="text-xs font-bold text-gray-500">Uploading to R2…</p>
+              <p className="text-xs font-bold text-gray-500">Uploading image…</p>
             </>
           ) : (
             <>
@@ -100,7 +130,7 @@ export default function ImageUploadField({
                 <p className="text-xs font-bold text-gray-600">
                   {dragging ? "Drop image here" : "Click to upload or drag & drop"}
                 </p>
-                <p className="text-[10px] text-gray-400 mt-0.5">JPG, PNG, WEBP · Max 5 MB · Stored on R2</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">JPG, PNG, WEBP · Max 5 MB</p>
               </div>
             </>
           )}
@@ -126,7 +156,7 @@ export default function ImageUploadField({
               onError={(e) => { e.currentTarget.style.display = "none"; }} />
           </div>
           <div className="space-y-1">
-            <p className="text-[10px] text-gray-500 font-medium">Uploaded file</p>
+            <p className="text-[10px] text-gray-500 font-medium">Uploaded image</p>
             <button type="button" onClick={handleRemove}
               className="flex items-center gap-1 text-[11px] font-bold text-red-500 hover:text-red-600 transition">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
