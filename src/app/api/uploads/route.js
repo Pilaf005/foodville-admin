@@ -3,7 +3,7 @@ import { badRequest, forbidden } from "@/server/utils/apiError";
 import { requireAuth } from "@/server/middleware/auth";
 import { rateLimit } from "@/server/utils/rateLimit";
 import {
-  uploadImage,
+  uploadMedia,
   deleteObject,
   keyFromUrl,
   UPLOAD_FOLDERS,
@@ -23,17 +23,17 @@ function authorizeTarget(auth, folder, ownerId) {
 
   if (folder === "users") return auth.userId; // ignore any client-supplied id
 
-  if (auth.role !== "admin") throw forbidden("Only admins can upload catalog images.");
+  if (auth.role !== "admin") throw forbidden("Only admins can upload catalog media.");
   if (!ownerId) throw badRequest("An ownerId (e.g. the product slug) is required.");
   return ownerId;
 }
 
 /**
  * POST /api/uploads   (multipart/form-data)
- *   file        the image
+ *   file        the image or video file
  *   folder      products | categories | blogs | users
  *   ownerId     product/category/blog slug (ignored for "users")
- *   replaceUrl  optional — the previous image URL, deleted after a successful upload
+ *   replaceUrl  optional — the previous media URL, deleted after a successful upload
  * → { key, url }
  */
 export const POST = withRoute(async (req) => {
@@ -52,7 +52,7 @@ export const POST = withRoute(async (req) => {
 
   const buffer = Buffer.from(await file.arrayBuffer());
 
-  const result = await uploadImage({
+  const result = await uploadMedia({
     buffer,
     declaredType: file.type || "",
     folder,

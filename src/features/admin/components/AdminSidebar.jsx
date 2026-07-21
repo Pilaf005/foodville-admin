@@ -105,18 +105,22 @@ function SidebarContent({ onNavClick }) {
   return (
     <>
       {/* Logo */}
-      <div className="px-5 py-5 border-b border-white/10 shrink-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-[#6B7F59] flex items-center justify-center shrink-0">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
-              <path d="M12 2a5 5 0 0 1 5 5c0 5-5 11-5 11S7 12 7 7a5 5 0 0 1 5-5z"/>
-            </svg>
+      <div className="px-5 py-4 border-b border-white/10 shrink-0">
+        <Link href="/" className="flex flex-col items-start gap-1.5 group">
+          <div className="relative inline-flex items-center pr-3">
+            <img
+              src="/foodville-logo.png"
+              alt="Foodville"
+              className="h-8 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
+            />
+            <span className="absolute top-0 right-0 text-[11px] font-black text-white/80 leading-none select-none pointer-events-none">
+              ®
+            </span>
           </div>
-          <div>
-            <p className="text-sm font-black tracking-tight leading-none">Foodville</p>
-            <p className="text-[10px] text-white/50 font-medium mt-0.5 uppercase tracking-widest">Admin</p>
-          </div>
-        </div>
+          <span className="px-2 py-0.5 text-[9px] font-black bg-[#6B7F59] text-white rounded-md uppercase tracking-widest shadow-sm">
+            ADMIN
+          </span>
+        </Link>
       </div>
 
       {/* Nav */}

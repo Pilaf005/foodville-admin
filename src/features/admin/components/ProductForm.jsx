@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAdminCategories, useAdminMutations, useAdminProducts } from "@/features/admin/hooks/useAdmin";
 import ImageUploadField from "@/features/admin/components/ui/ImageUploadField";
+import VideoUploadField from "@/features/admin/components/ui/VideoUploadField";
 import { toast } from "sonner";
  
 const slugify = (s) =>
@@ -18,6 +19,7 @@ const EMPTY = {
   name: "", slug: "", category: "", extraCategories: [], description: "",
   price: "", mrp: "", stock: "", unit: "100g", brand: "Foodville", tags: "",
   image: "", images: [],
+  video: "", videos: [],
   units: [],
   comboIncludes: [],
   highlights: {
@@ -63,6 +65,8 @@ export default function ProductForm({ product, isNew }) {
       ...EMPTY, ...product,
       tags:   Array.isArray(product?.tags)   ? product.tags.join(", ") : (product?.tags ?? ""),
       images: Array.isArray(product?.images) ? product.images : (product?.images ? [product.images] : []),
+      video:  product?.video || "",
+      videos: Array.isArray(product?.videos) ? product.videos : (product?.video ? [product.video] : []),
       units:  Array.isArray(product?.units)  ? product.units : [],
       comboIncludes: Array.isArray(product?.comboIncludes) ? product.comboIncludes : [],
       extraCategories: Array.isArray(product?.extraCategories) ? product.extraCategories : [],
@@ -122,6 +126,8 @@ export default function ProductForm({ product, isNew }) {
       stock:  Number(form.stock),
       tags:   form.tags.split(",").map((t) => t.trim()).filter(Boolean),
       images: form.images.map((u) => u.trim()).filter(Boolean),
+      video:  (form.video || "").trim(),
+      videos: (form.videos || []).map((v) => v.trim()).filter(Boolean),
       units:  parsedUnits,
       extraCategories: (form.extraCategories || []).filter((c) => c !== form.category),
       comboIncludes: isCombo ? (form.comboIncludes || []).map((c) => ({
@@ -536,6 +542,19 @@ export default function ProductForm({ product, isNew }) {
             </div>
           )}
         </div>
+      </Section>
+
+      {/* Product Video */}
+      <Section title="Product Video (Optional)">
+        <VideoUploadField
+          label="Product Video Clip"
+          value={form.video}
+          ownerId={form.slug || "catalog"}
+          onChange={(v) => {
+            set("video", v);
+            set("videos", v ? [v] : []);
+          }}
+        />
       </Section>
 
       {/* Details & Highlights */}

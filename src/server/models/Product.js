@@ -68,6 +68,8 @@ const ProductSchema = new Schema(
 
     image: { type: String, default: "" }, // card thumbnail
     images: { type: [String], default: [] }, // gallery
+    video: { type: String, default: "" }, // primary product video clip
+    videos: { type: [String], default: [] }, // gallery video clips
     description: { type: String, default: "" },
     details: { type: String, default: "" },
 

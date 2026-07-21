@@ -4,6 +4,11 @@ import AppProviders from "@/providers";
 export const metadata = {
   title: "Foodville Admin Panel",
   description: "Management dashboard for Foodville catalog, orders, customers, and blogs.",
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/favicon.ico",
+    apple: "/apple-icon.png",
+  },
 };
 
 export default function RootLayout({ children }) {

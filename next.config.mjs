@@ -12,11 +12,17 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      // blob: needed for FFmpeg WASM toBlobURL(); wasm-unsafe-eval needed for WebAssembly execution
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob:",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https://*.r2.dev https://pub-*.r2.dev https://images.unsplash.com https://plus.unsplash.com",
-      "connect-src 'self' https://nominatim.openstreetmap.org",
+      // blob: needed for FFmpeg WASM worker; https://*.r2.dev for video streaming
+      "connect-src 'self' blob: https://nominatim.openstreetmap.org https://*.r2.dev https://pub-*.r2.dev",
+      // R2 video URLs need media-src permission for <video> tags
+      "media-src 'self' blob: https://*.r2.dev https://pub-*.r2.dev",
+      // worker-src blob: needed for FFmpeg WASM worker thread
+      "worker-src 'self' blob:",
       "frame-src 'none'",
       "object-src 'none'",
       "base-uri 'self'",
