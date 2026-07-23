@@ -110,12 +110,13 @@ export async function createShiprocketOrder(order, { weight, length, width, heig
     const itemDiscount = totalSubtotal > 0 ? (itemTotal / totalSubtotal) * totalDiscount : 0;
     const netItemTotal = Math.max(0, itemTotal - itemDiscount);
     const netUnitPrice = item.qty > 0 ? Math.round((netItemTotal / item.qty) * 100) / 100 : item.price;
+    const finalPrice = Number.isNaN(netUnitPrice) || netUnitPrice <= 0 ? (item.price || 1) : netUnitPrice;
 
     return {
       name: item.name,
       sku: item.slug || String(item.productId || "").toLowerCase().replace(/\s+/g, "-"),
       units: item.qty,
-      selling_price: String(netUnitPrice),
+      selling_price: String(finalPrice),
       discount: "0",
       tax: "5",
       hsn: item.hsnCode || "2106",
@@ -124,7 +125,7 @@ export async function createShiprocketOrder(order, { weight, length, width, heig
 
   const payload = {
     order_id: order.orderId,
-    order_date: formatShiprocketDate(order.placedAt),
+    order_date: formatShiprocketDate(order.placedAt || order.createdAt || new Date()),
     pickup_location: pickupLocation,
     billing_customer_name: order.address.receiverName,
     billing_last_name: "",
