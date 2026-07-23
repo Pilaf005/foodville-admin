@@ -100,16 +100,27 @@ function formatShiprocketDate(date) {
 export async function createShiprocketOrder(order, { weight, length, width, height }) {
   const pickupLocation = env.shiprocket.pickupLocation || "Primary";
 
-  // Format order items for Shiprocket
-  const orderItems = order.items.map((item) => ({
-    name: item.name,
-    sku: item.slug || String(item.productId),
-    units: item.qty,
-    selling_price: item.price,
-    discount: "",
-    tax: "",
-    hsn: "",
-  }));
+  const totalSubtotal = order.amounts?.subtotal || order.items?.reduce((s, i) => s + (i.price * i.qty), 0) || 1;
+  const totalDiscount = order.amounts?.discount || 0;
+  const netSubtotal = Math.max(0, totalSubtotal - totalDiscount);
+
+  // Format order items for Shiprocket with net effective unit price
+  const orderItems = order.items.map((item) => {
+    const itemTotal = item.price * item.qty;
+    const itemDiscount = totalSubtotal > 0 ? (itemTotal / totalSubtotal) * totalDiscount : 0;
+    const netItemTotal = Math.max(0, itemTotal - itemDiscount);
+    const netUnitPrice = item.qty > 0 ? Math.round((netItemTotal / item.qty) * 100) / 100 : item.price;
+
+    return {
+      name: item.name,
+      sku: item.slug || String(item.productId || "").toLowerCase().replace(/\s+/g, "-"),
+      units: item.qty,
+      selling_price: String(netUnitPrice),
+      discount: "0",
+      tax: "5",
+      hsn: item.hsnCode || "2106",
+    };
+  });
 
   const payload = {
     order_id: order.orderId,
@@ -128,7 +139,9 @@ export async function createShiprocketOrder(order, { weight, length, width, heig
     shipping_is_billing: true,
     order_items: orderItems,
     payment_method: order.paymentMethod === "cod" ? "COD" : "Prepaid",
-    sub_total: order.amounts.subtotal,
+    sub_total: netSubtotal,
+    discount: 0,
+    shipping_charges: order.amounts?.deliveryCharge || 0,
     length: Number(length),
     breadth: Number(width),
     height: Number(height),

@@ -10,7 +10,7 @@ function resolveVariant(product, unit) {
   return { unit: product.unit || "", price: product.price, mrp: product.mrp ?? product.price };
 }
 
-export async function priceItems(rawItems) {
+export async function priceItems(rawItems, { discount = 0, couponCode = "", discountLabel = "" } = {}) {
   if (!Array.isArray(rawItems) || rawItems.length === 0) {
     throw badRequest("Cart is empty.");
   }
@@ -46,11 +46,11 @@ export async function priceItems(rawItems) {
   const subtotal = items.reduce((sum, i) => sum + i.price * i.qty, 0);
   const mrpTotal = items.reduce((sum, i) => sum + (i.mrp ?? i.price) * i.qty, 0);
   const savings = Math.max(0, mrpTotal - subtotal);
-  const deliveryCharge = subtotal >= (env.freeDeliveryThreshold ?? 500) ? 0 : (env.deliveryCharge ?? 40);
-  const total = subtotal + deliveryCharge;
+  const deliveryCharge = subtotal > (env.freeDeliveryThreshold ?? 499) ? 0 : (env.deliveryCharge ?? 40);
+  const total = Math.max(0, subtotal - discount + deliveryCharge);
 
   return {
     items,
-    amounts: { subtotal, savings, deliveryCharge, total },
+    amounts: { subtotal, savings, discount, couponCode, discountLabel, deliveryCharge, total },
   };
 }
