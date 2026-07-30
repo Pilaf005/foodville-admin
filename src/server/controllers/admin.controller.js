@@ -7,6 +7,7 @@ import Order, { ORDER_STATUSES } from "@/server/models/Order";
 import User from "@/server/models/User";
 import Category from "@/server/models/Category";
 import Blog from "@/server/models/Blog";
+import BlockedPincode from "@/server/models/BlockedPincode";
 import { badRequest, notFound } from "@/server/utils/apiError";
 import { serializeProduct, serializeProducts, serializeBlog } from "@/server/utils/serialize";
 import { serializeOrder, cancelOrder } from "@/server/controllers/order.controller";
@@ -412,3 +413,91 @@ export async function adminDeleteBlog(numericId) {
   cacheClear();
   return { deleted: true, numericId: Number(numericId) };
 }
+
+/* ── Blocked Pincodes ─────────────────────────────────────────────────────── */
+
+export async function adminListBlockedPincodes(search = "") {
+  const filter = {};
+  if (search.trim()) {
+    filter.pincode = { $regex: search.trim(), $options: "i" };
+  }
+  const items = await BlockedPincode.find(filter).sort({ createdAt: -1 }).lean();
+  return items.map((item) => ({
+    id: item._id.toString(),
+    pincode: item.pincode,
+    reason: item.reason,
+    blockType: item.blockType || "ALL",
+    isEntirePincodeBlocked: item.isEntirePincodeBlocked !== false,
+    blockedAreas: item.blockedAreas || [],
+    availableAreas: item.availableAreas || [],
+    isActive: item.isActive !== false,
+    createdAt: item.createdAt
+  }));
+}
+
+export async function adminCreateBlockedPincodes({
+  pincodes,
+  reason = "Non-serviceable location",
+  blockType = "ALL",
+  isEntirePincodeBlocked = true,
+  blockedAreas = [],
+  availableAreas = []
+}) {
+  if (!pincodes) throw badRequest("Please enter at least one 6-digit PIN code.");
+  
+  // Extract 6-digit pincode numbers from single input or bulk string (comma/space/newline separated)
+  const rawList = String(pincodes).split(/[\s,\n\r]+/);
+  const validPincodes = Array.from(new Set(
+    rawList
+      .map((p) => p.replace(/\D/g, ""))
+      .filter((p) => p.length === 6)
+  ));
+
+  if (validPincodes.length === 0) {
+    throw badRequest("No valid 6-digit PIN code found in input.");
+  }
+
+  const results = [];
+  for (const pin of validPincodes) {
+    const updated = await BlockedPincode.findOneAndUpdate(
+      { pincode: pin },
+      {
+        $set: {
+          pincode: pin,
+          reason,
+          blockType,
+          isEntirePincodeBlocked: Boolean(isEntirePincodeBlocked),
+          blockedAreas: Array.isArray(blockedAreas) ? blockedAreas : [],
+          availableAreas: Array.isArray(availableAreas) ? availableAreas : [],
+          isActive: true
+        }
+      },
+      { upsert: true, new: true }
+    );
+    results.push(updated);
+  }
+
+  cacheClear();
+  return { count: results.length, pincodes: validPincodes };
+}
+
+export async function adminDeleteBlockedPincode(idOrPin) {
+  const deleted = await BlockedPincode.findOneAndDelete({
+    $or: [{ _id: idOrPin.match(/^[0-9a-fA-F]{24}$/) ? idOrPin : null }, { pincode: idOrPin }]
+  });
+  if (!deleted) throw notFound("PIN code not found in blocklist.");
+  cacheClear();
+  return { deleted: true, pincode: deleted.pincode };
+}
+
+export async function adminToggleBlockedPincode(idOrPin) {
+  const item = await BlockedPincode.findOne({
+    $or: [{ _id: idOrPin.match(/^[0-9a-fA-F]{24}$/) ? idOrPin : null }, { pincode: idOrPin }]
+  });
+  if (!item) throw notFound("PIN code not found.");
+  item.isActive = !item.isActive;
+  await item.save();
+  cacheClear();
+  return { pincode: item.pincode, isActive: item.isActive };
+}
+

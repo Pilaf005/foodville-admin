@@ -10,6 +10,7 @@ const PAGE_TITLES = {
   "/categories":  "Categories",
   "/blogs":       "Blogs",
   "/users":       "Customers",
+  "/pincodes":    "Blocked PIN Codes",
 };
 
 function getTitle(pathname) {

@@ -66,10 +66,7 @@ function CategoryModal({ isOpen, initial, onClose, onSave, isPending }) {
             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Category Name <span className="text-red-400">*</span></label>
             <input required type="text" value={form.name} onChange={(e) => handleNameChange(e.target.value)} placeholder="e.g. Spice Powders" className={ic} />
           </div>
-          <div className="space-y-1.5">
-            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Slug</label>
-            <input type="text" value={form.slug} onChange={(e) => { setIsSlugManual(true); setForm((p) => ({ ...p, slug: slugify(e.target.value) })); }} placeholder="auto-generated from name" className={ic} />
-          </div>
+
           <ImageUploadField
             label="Category Image"
             value={form.image}
@@ -144,8 +141,7 @@ export default function AdminCategoriesPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-gray-900 truncate">{cat.name}</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">slug: <code className="bg-gray-100 px-1 rounded">{cat.slug}</code></p>
-                <p className="text-[10px] text-[#6B7F59] font-semibold mt-0.5">{cat.productCount ?? 0} products</p>
+                <p className="text-[11px] text-[#6B7F59] font-semibold mt-0.5">{cat.productCount ?? 0} products</p>
               </div>
               <div className="flex flex-col gap-1.5 shrink-0">
                 <button onClick={() => setModal(cat)} className="text-[11px] font-bold text-blue-600 hover:underline">Edit</button>

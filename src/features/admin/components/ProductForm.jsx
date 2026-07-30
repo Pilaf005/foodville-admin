@@ -75,7 +75,6 @@ export default function ProductForm({ product, isNew }) {
   });
 
   const isPending = createProduct.isPending || updateProduct.isPending;
-  const [isSlugManual, setIsSlugManual] = useState(false);
   const isCombo = form.category === "combos" || (form.extraCategories || []).includes("combos");
  
   function set(key, val)   { setForm((p) => ({ ...p, [key]: val })); }
@@ -83,7 +82,7 @@ export default function ProductForm({ product, isNew }) {
  
   function handleNameChange(val) {
     set("name", val);
-    if (isNew && !isSlugManual) {
+    if (isNew) {
       set("slug", slugify(val));
     }
   }
@@ -120,6 +119,7 @@ export default function ProductForm({ product, isNew }) {
 
     const payload = {
       ...form,
+      slug: form.slug || slugify(form.name),
       price:  firstUnit.price,
       mrp:    firstUnit.mrp || firstUnit.price,
       unit:   firstUnit.unit,
@@ -149,12 +149,9 @@ export default function ProductForm({ product, isNew }) {
     <form onSubmit={handleSave} className="space-y-5">
       {/* Basic Info */}
       <Section title="Basic Info">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Product Name" required>
             <input required type="text" value={form.name} onChange={(e) => handleNameChange(e.target.value)} placeholder="e.g. Kashmiri Red Chilli Powder" className={ic} />
-          </Field>
-          <Field label="Slug" required>
-            <input required type="text" value={form.slug} onChange={(e) => { setIsSlugManual(true); set("slug", slugify(e.target.value)); }} placeholder="kashmiri-red-chilli-powder" className={ic} />
           </Field>
           <Field label="Category" required>
             <select value={form.category} onChange={(e) => set("category", e.target.value)} className={ic}>

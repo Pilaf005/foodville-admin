@@ -214,15 +214,7 @@ function BlogModal({ blog, onClose }) {
             <input value={form.title} onChange={(e) => set("title", e.target.value)} className={inputCls} required />
           </Field>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Field label="Slug">
-              <input
-                value={form.slug}
-                onChange={(e) => set("slug", slugify(e.target.value))}
-                placeholder={slugify(form.title) || "auto"}
-                className={inputCls}
-              />
-            </Field>
+          <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Category">
               <select value={form.category} onChange={(e) => set("category", e.target.value)} className={inputCls}>
                 {Object.keys(CATEGORY_COLORS).map((c) => <option key={c} value={c}>{c}</option>)}
