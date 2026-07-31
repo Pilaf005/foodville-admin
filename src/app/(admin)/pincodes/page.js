@@ -517,17 +517,7 @@ export default function AdminPincodesPage() {
                 </select>
               </div>
 
-              {/* Reason */}
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Reason / Internal Note</label>
-                <input
-                  type="text"
-                  value={reasonInput}
-                  onChange={(e) => setReasonInput(e.target.value)}
-                  placeholder="e.g. Unserviceable courier area, High RTO"
-                  className="w-full border border-gray-200 rounded-xl p-2.5 text-xs font-semibold text-gray-900 focus:outline-none focus:border-[#6B7F59]"
-                />
-              </div>
+
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
                 <button
