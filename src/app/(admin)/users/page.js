@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useAdminUsers } from "@/features/admin/hooks/useAdmin";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Skeleton } from "@/components/feedback/Skeleton";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
  
 function Pagination({ meta, page, setPage }) {
   if (!meta || meta.totalPages <= 1) return null;
