@@ -4,25 +4,26 @@ import { useState, useEffect } from "react";
 import { useAdminUsers } from "@/features/admin/hooks/useAdmin";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Skeleton } from "@/components/feedback/Skeleton";
+import toast from "react-hot-toast";
  
 function Pagination({ meta, page, setPage }) {
   if (!meta || meta.totalPages <= 1) return null;
   return (
     <div className="flex items-center justify-center gap-2 pt-2">
       <button disabled={page <= 1} onClick={() => setPage(page - 1)}
-        className="px-3 py-1.5 text-xs font-bold rounded-xl border border-gray-200 disabled:opacity-40 hover:border-[#6B7F59] transition">
+        className="px-3 py-1.5 text-xs font-bold rounded-xl border border-gray-200 disabled:opacity-40 hover:border-[#6B7F59] transition cursor-pointer">
         ← Prev
       </button>
       <span className="text-xs text-gray-500 font-semibold">Page {page} of {meta.totalPages}</span>
       <button disabled={page >= meta.totalPages} onClick={() => setPage(page + 1)}
-        className="px-3 py-1.5 text-xs font-bold rounded-xl border border-gray-200 disabled:opacity-40 hover:border-[#6B7F59] transition">
+        className="px-3 py-1.5 text-xs font-bold rounded-xl border border-gray-200 disabled:opacity-40 hover:border-[#6B7F59] transition cursor-pointer">
         Next →
       </button>
     </div>
   );
 }
  
-function CustomerDetailsModal({ userId, onClose }) {
+function CustomerDetailsModal({ userId, onClose, onRequestDelete }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -54,9 +55,20 @@ function CustomerDetailsModal({ userId, onClose }) {
         {/* Modal Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gray-50/50">
           <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight">Customer Profile</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                onRequestDelete({ id: userId, email: data?.user?.email || "customer" });
+                onClose();
+              }}
+              className="px-3 py-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold rounded-lg transition cursor-pointer"
+            >
+              Delete Customer
+            </button>
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition cursor-pointer">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
         </div>
  
         {/* Modal Body */}
@@ -99,19 +111,19 @@ function CustomerDetailsModal({ userId, onClose }) {
  
               {/* Stats overview */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="border border-gray-150 p-4 rounded-xl space-y-1 bg-gray-50/50">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Total Orders</span>
-                  <p className="text-lg font-black text-gray-900">{data.stats.totalOrders}</p>
+                <div className="p-4 rounded-xl bg-gray-50 border border-gray-200/80">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-gray-400">Total Orders</p>
+                  <p className="text-xl font-black text-gray-900 mt-1">{data.stats.totalOrders}</p>
                 </div>
-                <div className="border border-gray-150 p-4 rounded-xl space-y-1 bg-gray-50/50">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Total Spent</span>
-                  <p className="text-lg font-black text-[#6B7F59]">₹{data.stats.totalSpent.toFixed(2)}</p>
+                <div className="p-4 rounded-xl bg-gray-50 border border-gray-200/80">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-gray-400">Total Spent</p>
+                  <p className="text-xl font-black text-[#6B7F59] mt-1">₹{data.stats.totalSpent.toFixed(2)}</p>
                 </div>
               </div>
  
               {/* Addresses */}
               <div className="space-y-2">
-                <h5 className="text-xs font-black text-gray-900 uppercase tracking-wider">Saved Addresses</h5>
+                <h5 className="text-xs font-black text-gray-900 uppercase tracking-wider">Saved Addresses ({data.addresses.length})</h5>
                 {data.addresses.length === 0 ? (
                   <p className="text-[11px] text-gray-400 italic">No saved addresses.</p>
                 ) : (
@@ -191,14 +203,6 @@ function CustomerDetailsModal({ userId, onClose }) {
             </>
           )}
         </div>
- 
-        {/* Modal Footer */}
-        <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50 flex justify-end">
-          <button onClick={onClose} className="px-4 py-2 border border-gray-200 hover:bg-gray-100 text-gray-700 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95">
-            Close Profile
-          </button>
-        </div>
- 
       </div>
     </div>
   );
@@ -209,17 +213,75 @@ export default function AdminUsersPage() {
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
   const [selectedUserId, setSelectedUserId] = useState(null);
+  const [purging, setPurging] = useState(false);
+
+  // Custom Modal States
+  const [deleteUserTarget, setDeleteUserTarget] = useState(null); // { id, email }
+  const [isPurgingModalOpen, setIsPurgingModalOpen] = useState(false);
+
   const debounced = useDebounce(search.trim(), 300);
  
-  const { users, meta, isPending } = useAdminUsers({
+  const { users, meta, isPending, refetch } = useAdminUsers({
     ...(debounced ? { search: debounced } : {}),
     ...(status ? { status } : {}),
     page,
     limit: 20,
   });
+
+  const confirmPurgeUnverified = async () => {
+    setIsPurgingModalOpen(false);
+    setPurging(true);
+    try {
+      const res = await fetch("/api/admin/users", { method: "DELETE" });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`Purged ${data.data.purgedCount} unverified spam account(s)!`);
+        if (refetch) refetch();
+      }
+    } catch (err) {
+      toast.error("Failed to purge unverified users.");
+    } finally {
+      setPurging(false);
+    }
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!deleteUserTarget) return;
+    try {
+      const res = await fetch(`/api/admin/users/${deleteUserTarget.id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Customer account deleted.");
+        setDeleteUserTarget(null);
+        if (refetch) refetch();
+      }
+    } catch (err) {
+      toast.error("Failed to delete customer account.");
+    }
+  };
  
   return (
     <div className="space-y-4">
+      {/* Header Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-black text-gray-900 tracking-tight">Customer Management</h2>
+          <p className="text-xs text-gray-500 font-medium">Manage registered customers and unverified OTP leads.</p>
+        </div>
+
+        <button
+          onClick={() => setIsPurgingModalOpen(true)}
+          disabled={purging}
+          className="inline-flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-4 py-2 rounded-xl font-bold text-xs shadow-sm transition active:scale-95 shrink-0 cursor-pointer disabled:opacity-50"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+            <path d="M3 6h18" />
+            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+          </svg>
+          {purging ? "Purging..." : "Purge Unverified Spam Users"}
+        </button>
+      </div>
+
       <div className="flex flex-col gap-2 sm:flex-row">
         <input
           value={search}
@@ -284,12 +346,18 @@ export default function AdminUsersPage() {
                     <td className="px-4 py-3 text-muted">
                       {u.createdAt ? new Date(u.createdAt).toLocaleDateString("en-IN") : "—"}
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-4 py-3 text-center space-x-2">
                       <button
                         onClick={() => setSelectedUserId(u.id)}
                         className="px-3 py-1.5 bg-[#6B7F59] hover:bg-[#5a6b4a] text-white text-[11px] font-bold rounded-lg transition active:scale-95 cursor-pointer shadow-sm"
                       >
                         View Details
+                      </button>
+                      <button
+                        onClick={() => setDeleteUserTarget({ id: u.id, email: u.email })}
+                        className="px-2.5 py-1.5 text-red-600 hover:bg-red-50 text-[11px] font-bold rounded-lg transition cursor-pointer"
+                      >
+                        Delete
                       </button>
                     </td>
                   </tr>
@@ -306,7 +374,90 @@ export default function AdminUsersPage() {
       <CustomerDetailsModal
         userId={selectedUserId}
         onClose={() => setSelectedUserId(null)}
+        onRequestDelete={(target) => setDeleteUserTarget(target)}
       />
+
+      {/* User-Friendly Delete Single Customer Confirmation Modal */}
+      {deleteUserTarget && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-gray-100 text-center space-y-4 animate-scale-in">
+            <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 mx-auto grid place-items-center text-xl">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                <path d="M3 6h18" />
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+              </svg>
+            </div>
+
+            <div>
+              <h3 className="text-base font-bold text-gray-900">
+                Delete Customer Account?
+              </h3>
+              <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
+                Are you sure you want to permanently delete the account for <strong className="font-mono text-red-600">{deleteUserTarget.email}</strong>?
+              </p>
+            </div>
+
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteUserTarget(null)}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 transition active:scale-95 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteUser}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition shadow-sm active:scale-95 cursor-pointer"
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* User-Friendly Purge All Spam Users Confirmation Modal */}
+      {isPurgingModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-gray-100 text-center space-y-4 animate-scale-in">
+            <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-600 mx-auto grid place-items-center text-xl">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                <path d="M3 6h18" />
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+              </svg>
+            </div>
+
+            <div>
+              <h3 className="text-base font-bold text-gray-900">
+                Purge Unverified Spam Accounts?
+              </h3>
+              <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
+                This will safely delete all unverified lead accounts (<span className="font-semibold text-amber-700">status: pending</span>) that have <strong>0 orders placed</strong>.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsPurgingModalOpen(false)}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 transition active:scale-95 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmPurgeUnverified}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition shadow-sm active:scale-95 cursor-pointer"
+              >
+                Purge Accounts
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

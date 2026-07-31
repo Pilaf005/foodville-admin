@@ -31,3 +31,11 @@ export const PATCH = withRoute(async (req, { params }) => {
  
   return ok({ success: true, item: doc });
 });
+
+export const DELETE = withRoute(async (req, { params }) => {
+  await requireAdmin(req);
+  const { id } = await params;
+  const doc = await FranchiseApplication.findByIdAndDelete(id);
+  if (!doc) throw notFound("Franchise application not found");
+  return ok({ success: true, deleted: true, id });
+});

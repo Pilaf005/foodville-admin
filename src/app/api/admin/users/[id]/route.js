@@ -50,3 +50,12 @@ export const GET = withRoute(async (req, { params }) => {
     }
   });
 });
+
+// DELETE /api/admin/users/:id — delete a single customer account
+export const DELETE = withRoute(async (req, { params }) => {
+  await requireAdmin(req);
+  const { id } = await params;
+  const user = await User.findByIdAndDelete(id);
+  if (!user) throw notFound("Customer not found.");
+  return ok({ success: true, deleted: true, id });
+});
