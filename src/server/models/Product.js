@@ -90,6 +90,7 @@ const ProductSchema = new Schema(
 
     // admin / lifecycle
     isActive: { type: Boolean, default: true, index: true },
+    isComingSoon: { type: Boolean, default: false, index: true },
   },
   {
     timestamps: true,

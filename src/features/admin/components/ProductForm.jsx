@@ -18,6 +18,7 @@ const slugify = (s) =>
 const EMPTY = {
   name: "", slug: "", category: "", extraCategories: [], description: "",
   price: "", mrp: "", stock: "", unit: "100g", brand: "Foodville", tags: "",
+  isComingSoon: false,
   image: "", images: [],
   video: "", videos: [],
   units: [],
@@ -135,6 +136,7 @@ export default function ProductForm({ product, isNew }) {
         qty: c.qty,
         isFree: !!c.isFree
       })) : undefined,
+      isComingSoon: !!form.isComingSoon,
     };
 
     if (isNew) {
@@ -206,6 +208,48 @@ export default function ProductForm({ product, isNew }) {
           <p className="text-[10px] text-gray-400">
             Select additional categories if you want this product to appear in multiple categories on the storefront.
           </p>
+        </div>
+
+        {/* Coming Soon Toggle Card */}
+        <div className="pt-4 border-t border-gray-100">
+          <div className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
+            form.isComingSoon 
+              ? "bg-amber-50/80 border-amber-300/80 shadow-xs" 
+              : "bg-gray-50/80 border-gray-200"
+          }`}>
+            <div className="space-y-0.5 pr-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-gray-900">Mark as Coming Soon</span>
+                {form.isComingSoon ? (
+                  <span className="text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md bg-amber-500 text-white shadow-xs">
+                    COMING SOON ON
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-semibold tracking-wide uppercase px-2 py-0.5 rounded-md bg-gray-200 text-gray-600">
+                    Normal Product
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-gray-500">
+                When enabled, the storefront hides price, discount tags, and Add-to-Cart buttons, displaying a &quot;Coming Soon&quot; badge instead.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={!!form.isComingSoon}
+              onClick={() => set("isComingSoon", !form.isComingSoon)}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#6B7F59]/40 ${
+                form.isComingSoon ? "bg-amber-500" : "bg-gray-300"
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                  form.isComingSoon ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
         </div>
       </Section>
 

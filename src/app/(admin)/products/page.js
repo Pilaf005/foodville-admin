@@ -95,7 +95,13 @@ export default function AdminProductsPage() {
                     <td className="px-4 py-3 text-xs font-bold text-gray-900 whitespace-nowrap">₹{p.price}</td>
                     <td className="px-4 py-3 text-xs text-gray-400 line-through whitespace-nowrap">₹{p.mrp}</td>
                     <td className="px-4 py-3 text-xs font-semibold text-gray-700">{p.stock}</td>
-                    <td className="px-4 py-3"><AdminBadge variant={stockVariant(p.stock)} dot>{stockLabel(p.stock)}</AdminBadge></td>
+                    <td className="px-4 py-3">
+                      {p.isComingSoon ? (
+                        <AdminBadge variant="amber" dot>Coming Soon</AdminBadge>
+                      ) : (
+                        <AdminBadge variant={stockVariant(p.stock)} dot>{stockLabel(p.stock)}</AdminBadge>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Link href={`/products/${pid}`} className="text-xs font-bold text-[#6B7F59] hover:underline">Edit</Link>
