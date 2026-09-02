@@ -7,6 +7,7 @@ const PAGE_TITLES = {
   "/":            "Dashboard",
   "/products":    "Products",
   "/orders":      "Orders",
+  "/coupons":     "Coupons & Offers",
   "/categories":  "Categories",
   "/blogs":       "Blogs",
   "/users":       "Customers",
