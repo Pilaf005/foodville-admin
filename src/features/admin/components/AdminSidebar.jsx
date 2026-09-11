@@ -82,11 +82,14 @@ const NAV = [
     ),
   },
   {
-    href: "/franchise-applications",
-    label: "Franchise Leads",
+    href: "/distributor-applications",
+    label: "Distributor Leads",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-        <path d="M3 21h18M3 7v14M21 7v14M6 11h12M6 15h12M9 3h6v4H9z" />
+        <path d="M10 17h4V5H2v12h3" />
+        <path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h1" />
+        <circle cx="7.5" cy="17.5" r="2.5" />
+        <circle cx="17.5" cy="17.5" r="2.5" />
       </svg>
     ),
   },
@@ -97,6 +100,17 @@ const NAV = [
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
         <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+      </svg>
+    ),
+  },
+  {
+    href: "/export-inquiries",
+    label: "Global Export",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+        <path d="M2 12h20" />
       </svg>
     ),
   },
@@ -145,8 +159,8 @@ function SidebarContent({ onNavClick }) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-4 space-y-0.5 px-3">
-        <p className="px-2 py-2 text-[9px] font-black text-white/30 uppercase tracking-widest">Menu</p>
+      <nav className="flex-1 overflow-y-auto no-scrollbar py-3 space-y-0.5 px-3">
+        <p className="px-2 py-1.5 text-[9px] font-black text-white/30 uppercase tracking-widest">Menu</p>
         {NAV.map((item) => {
           const active = isActive(item);
           return (
@@ -155,7 +169,7 @@ function SidebarContent({ onNavClick }) {
               href={item.href}
               onClick={onNavClick}
               className={cn(
-                "flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-all duration-150 min-h-[48px]",
+                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 min-h-[42px]",
                 active
                   ? "bg-[#6B7F59] text-white shadow-sm"
                   : "text-white/65 hover:text-white hover:bg-white/8"
@@ -169,12 +183,12 @@ function SidebarContent({ onNavClick }) {
       </nav>
 
       {/* Bottom */}
-      <div className="px-3 py-4 border-t border-white/10 space-y-1 shrink-0">
+      <div className="px-3 py-3 border-t border-white/10 space-y-1 shrink-0">
         <button
           suppressHydrationWarning
           onClick={() => logout.mutate()}
           disabled={logout.isPending}
-          className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-white/50 hover:text-white hover:bg-white/8 transition disabled:opacity-40 min-h-[48px]"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-white/50 hover:text-white hover:bg-white/8 transition disabled:opacity-40 min-h-[42px]"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>

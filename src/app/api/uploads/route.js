@@ -12,6 +12,7 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60; // 60 seconds timeout for large video uploads
 
 /**
  * Decide where this caller is allowed to write.
@@ -40,23 +41,58 @@ export const POST = withRoute(async (req) => {
   const auth = await requireAuth(req);
   rateLimit(req, { key: "upload", limit: 30, windowMs: 60_000 });
 
-  const form = await req.formData().catch(() => null);
-  if (!form) throw badRequest("Expected a multipart/form-data upload.");
+  const contentType = req.headers.get("content-type") || "";
 
-  const file = form.get("file");
-  if (!file || typeof file.arrayBuffer !== "function") throw badRequest("No file was uploaded.");
+  let buffer = null;
+  let declaredType = "";
+  let fileName = "";
+  let folder = "products";
+  let ownerId = "catalog";
+  let replaceUrl = null;
 
-  const folder = String(form.get("folder") || "products");
-  const ownerId = authorizeTarget(auth, folder, String(form.get("ownerId") || "catalog"));
-  const replaceUrl = form.get("replaceUrl") ? String(form.get("replaceUrl")) : null;
+  if (contentType.includes("multipart/form-data")) {
+    try {
+      const form = await req.formData();
+      const file = form.get("file");
+      if (file && typeof file.arrayBuffer === "function") {
+        buffer = Buffer.from(await file.arrayBuffer());
+        declaredType = file.type || "";
+        fileName = file.name || "";
+      }
+      folder = String(form.get("folder") || "products");
+      ownerId = String(form.get("ownerId") || "catalog");
+      replaceUrl = form.get("replaceUrl") ? String(form.get("replaceUrl")) : null;
+    } catch (err) {
+      console.warn("[upload] req.formData() failed, trying raw body buffer:", err?.message);
+      buffer = Buffer.from(await req.arrayBuffer());
+      folder = req.headers.get("x-folder") || "products";
+      ownerId = req.headers.get("x-owner-id") || "catalog";
+      fileName = req.headers.get("x-file-name") || "file";
+      replaceUrl = req.headers.get("x-replace-url") || null;
+      declaredType = req.headers.get("x-file-type") || contentType;
+    }
+  } else {
+    // Direct raw binary body upload (bypasses 10MB Undici FormData cap)
+    buffer = Buffer.from(await req.arrayBuffer());
+    folder = req.headers.get("x-folder") || "products";
+    ownerId = req.headers.get("x-owner-id") || "catalog";
+    fileName = req.headers.get("x-file-name") || "file";
+    replaceUrl = req.headers.get("x-replace-url") || null;
+    declaredType = req.headers.get("x-file-type") || contentType;
+  }
 
-  const buffer = Buffer.from(await file.arrayBuffer());
+  if (!buffer || buffer.length === 0) {
+    throw badRequest("No file content was received.");
+  }
+
+  const validOwnerId = authorizeTarget(auth, folder, ownerId);
 
   const result = await uploadMedia({
     buffer,
-    declaredType: file.type || "",
+    declaredType,
+    fileName,
     folder,
-    ownerId,
+    ownerId: validOwnerId,
     replaceUrl,
   });
 

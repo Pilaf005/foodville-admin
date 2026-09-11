@@ -20,7 +20,7 @@ const EMPTY = {
   price: "", mrp: "", stock: "", unit: "100g", brand: "Foodville", tags: "",
   isComingSoon: false,
   image: "", images: [],
-  video: "", videos: [],
+  video: "", videos: [], showInReels: false,
   units: [],
   comboIncludes: [],
   highlights: {
@@ -68,6 +68,7 @@ export default function ProductForm({ product, isNew }) {
       images: Array.isArray(product?.images) ? product.images : (product?.images ? [product.images] : []),
       video:  product?.video || "",
       videos: Array.isArray(product?.videos) ? product.videos : (product?.video ? [product.video] : []),
+      showInReels: !!product?.showInReels,
       units:  Array.isArray(product?.units)  ? product.units : [],
       comboIncludes: Array.isArray(product?.comboIncludes) ? product.comboIncludes : [],
       extraCategories: Array.isArray(product?.extraCategories) ? product.extraCategories : [],
@@ -129,6 +130,7 @@ export default function ProductForm({ product, isNew }) {
       images: form.images.map((u) => u.trim()).filter(Boolean),
       video:  (form.video || "").trim(),
       videos: (form.videos || []).map((v) => v.trim()).filter(Boolean),
+      showInReels: !!form.showInReels,
       units:  parsedUnits,
       extraCategories: (form.extraCategories || []).filter((c) => c !== form.category),
       comboIncludes: isCombo ? (form.comboIncludes || []).map((c) => ({
@@ -587,15 +589,35 @@ export default function ProductForm({ product, isNew }) {
 
       {/* Product Video */}
       <Section title="Product Video (Optional)">
-        <VideoUploadField
-          label="Product Video Clip"
-          value={form.video}
-          ownerId={form.slug || "catalog"}
-          onChange={(v) => {
-            set("video", v);
-            set("videos", v ? [v] : []);
-          }}
-        />
+        <div className="space-y-4">
+          <VideoUploadField
+            label="Product Video Clip"
+            value={form.video}
+            ownerId={form.slug || "catalog"}
+            onChange={(v) => {
+              set("video", v);
+              set("videos", v ? [v] : []);
+              set("showInReels", !!v);
+            }}
+          />
+
+          <label className="flex items-center gap-3 p-3.5 bg-gray-50/80 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-100/80 transition">
+            <input
+              type="checkbox"
+              checked={!!form.showInReels}
+              onChange={(e) => set("showInReels", e.target.checked)}
+              className="w-4 h-4 text-[#6B7F59] rounded border-gray-300 focus:ring-[#6B7F59]"
+            />
+            <div>
+              <span className="text-xs sm:text-sm font-bold text-gray-900 block">
+                Show in "Watch & Shop" Reel on Homepage
+              </span>
+              <span className="text-[11px] text-gray-500 block mt-0.5">
+                Enable to feature this product video in the 9:16 vertical reels slider on the main website.
+              </span>
+            </div>
+          </label>
+        </div>
       </Section>
 
       {/* Details & Highlights */}

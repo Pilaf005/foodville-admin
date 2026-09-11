@@ -70,6 +70,7 @@ const ProductSchema = new Schema(
     images: { type: [String], default: [] }, // gallery
     video: { type: String, default: "" }, // primary product video clip
     videos: { type: [String], default: [] }, // gallery video clips
+    showInReels: { type: Boolean, default: false, index: true }, // whether video appears in homepage reels
     description: { type: String, default: "" },
     details: { type: String, default: "" },
 

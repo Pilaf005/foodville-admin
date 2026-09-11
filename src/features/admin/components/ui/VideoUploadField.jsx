@@ -49,31 +49,33 @@ export default function VideoUploadField({
     return ff;
   }
 
-  /** Transcode any video file to browser-safe H.264 MP4 */
+  /** Transcode video formats to visually lossless H.264 MP4 for universal browser playback */
   async function transcodeToH264(file) {
     const { fetchFile } = await import("@ffmpeg/util");
     const ff = await loadFFmpeg();
 
-    setStatusMsg("Converting to H.264 MP4…");
+    setStatusMsg("Optimizing video to High-Definition H.264 MP4…");
     setProgress(0);
 
-    await ff.writeFile("input", await fetchFile(file));
+    const inputData = await fetchFile(file);
+    await ff.writeFile("input", inputData);
     await ff.exec([
       "-i", "input",
       "-c:v", "libx264",        // H.264 video codec (100% browser compatible)
-      "-preset", "fast",         // Fast encoding preset
-      "-crf", "23",              // Quality (23 = good balance of size and quality)
+      "-preset", "medium",       // High visual fidelity preset
+      "-crf", "18",              // Quality 18 = Visually Lossless High Definition
       "-c:a", "aac",             // AAC audio
-      "-b:a", "128k",            // 128kbps audio bitrate
+      "-b:a", "192k",            // 192kbps high quality audio
       "-movflags", "+faststart", // Web-optimized: metadata at file start for instant play
       "-pix_fmt", "yuv420p",     // Maximum compatibility pixel format
       "output.mp4",
     ]);
     const data = await ff.readFile("output.mp4");
-    await ff.deleteFile("input");
-    await ff.deleteFile("output.mp4");
+    await ff.deleteFile("input").catch(() => {});
+    await ff.deleteFile("output.mp4").catch(() => {});
 
-    return new File([data.buffer], "video.mp4", { type: "video/mp4" });
+    const cleanName = file.name.replace(/\.[^/.]+$/, "") + ".mp4";
+    return new File([data], cleanName, { type: "video/mp4" });
   }
 
   async function processFile(rawFile) {
@@ -91,36 +93,32 @@ export default function VideoUploadField({
 
     setUploading(true);
     try {
-      // Check if it's already a standard H.264 MP4. If so, skip transcode.
-      let file = rawFile;
-      const needsTranscode = !(rawFile.type === "video/mp4" && rawFile.name.endsWith(".mp4"))
-        || rawFile.type === "video/quicktime"   // MOV/iPhone
-        || rawFile.name.match(/\.(mov|mkv|avi|m4v|3gp|ts|flv|wmv)$/i);
-
-      if (needsTranscode) {
-        setStatusMsg("Detected non-standard format. Auto-converting to H.264 MP4…");
-        file = await transcodeToH264(rawFile);
-      } else {
-        // Still transcode to ensure web-safe codec even for "mp4" files (e.g. HEVC mp4)
-        setStatusMsg("Verifying codec compatibility…");
-        file = await transcodeToH264(rawFile);
-      }
+      setStatusMsg("Optimizing video to HD H.264 MP4…");
+      const file = await transcodeToH264(rawFile);
 
       setStatusMsg("Uploading to cloud storage…");
       setProgress(0);
 
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("folder", folder || "products");
-      formData.append("ownerId", ownerId || "catalog");
-      if (value) formData.append("replaceUrl", value);
+      const headers = {
+        "x-folder": folder || "products",
+        "x-owner-id": ownerId || "catalog",
+        "x-file-name": file.name,
+        "x-file-type": "video/mp4",
+        "content-type": "video/mp4",
+      };
+      if (value) headers["x-replace-url"] = value;
 
-      const res = await fetch("/api/uploads", { method: "POST", body: formData });
+      const res = await fetch("/api/uploads", {
+        method: "POST",
+        headers,
+        body: file,
+      });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error?.message || "Upload failed.");
       onChange(json.data?.url || "");
       setStatusMsg("");
     } catch (err) {
+      console.error("[video-upload-error]", err);
       setError(err.message || "Upload or conversion failed. Try again.");
       setStatusMsg("");
     } finally {

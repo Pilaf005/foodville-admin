@@ -107,4 +107,6 @@ export function withRoute(handler) {
   };
 }
 
-export default { ok, created, noContent, fail, withRoute };
+export const withAdminRoute = withRoute;
+
+export default { ok, created, noContent, fail, withRoute, withAdminRoute };
