@@ -121,8 +121,20 @@ export default function VideoUploadField({
         throw new Error(errMsg);
       }
 
-      const { data: presignedData } = await presignedRes.json();
-      const { uploadUrl, publicUrl } = presignedData;
+      let presignedJson = {};
+      try {
+        presignedJson = await presignedRes.json();
+      } catch (_) {
+        throw new Error("Server returned an invalid response while generating upload token.");
+      }
+
+      const presignedData = presignedJson?.data || presignedJson;
+      const uploadUrl = presignedData?.uploadUrl;
+      const publicUrl = presignedData?.publicUrl;
+
+      if (!uploadUrl) {
+        throw new Error("Upload authorization token is missing from server response.");
+      }
 
       let uploadSuccess = false;
 
@@ -179,20 +191,20 @@ export default function VideoUploadField({
         });
 
         if (!serverRes.ok) {
-          const errText = await serverRes.text();
+          const errText = await serverRes.text().catch(() => "");
           let serverErrMsg = "Upload failed.";
           try {
             const errJson = JSON.parse(errText);
             serverErrMsg = errJson.message || errJson.error?.message || serverErrMsg;
           } catch (_) {
             if (errText.includes("Request Entity Too Large") || serverRes.status === 413) {
-              serverErrMsg = "Video file is too large for the web server proxy. Please enable CORS in your Cloudflare R2 bucket settings (see instructions) or paste a video URL directly using '+ Add via URL'.";
+              serverErrMsg = "Video exceeds server limit. Please ensure Cloudflare R2 CORS is enabled in your bucket settings, or use '+ Add via URL'.";
             }
           }
           throw new Error(serverErrMsg);
         }
 
-        const serverJson = await serverRes.json();
+        const serverJson = await serverRes.json().catch(() => ({}));
         onChange(serverJson.data?.url || "");
       }
 
