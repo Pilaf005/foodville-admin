@@ -303,7 +303,6 @@ export async function getPresignedUploadUrl({
     Bucket: env.r2.bucket,
     Key: key,
     ContentType: contentType,
-    CacheControl: "public, max-age=31536000, immutable",
   });
 
   const uploadUrl = await getSignedUrl(r2(), command, { expiresIn: 600 });
