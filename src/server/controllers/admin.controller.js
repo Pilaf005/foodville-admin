@@ -106,14 +106,26 @@ export async function adminUpdateProduct(numericId, data) {
   const existing = await Product.findOne({ numericId: Number(numericId) });
   if (!existing) throw notFound("Product not found.");
 
-  // If the main image was replaced, remove the old file from R2.
-  if (data.image && existing.image && data.image !== existing.image) {
+  // 1. Main image: If replaced or removed, delete the old file from R2
+  if (existing.image && data.image !== undefined && data.image !== existing.image) {
     await deleteByUrl(existing.image).catch(() => {});
   }
-  // Same for gallery images that were dropped.
+
+  // 2. Gallery images: Delete any images that were removed from the array
   if (Array.isArray(data.images)) {
-    const removed = (existing.images || []).filter((url) => !data.images.includes(url));
-    await Promise.all(removed.map((url) => deleteByUrl(url).catch(() => {})));
+    const removedImages = (existing.images || []).filter((url) => !data.images.includes(url));
+    await Promise.all(removedImages.map((url) => deleteByUrl(url).catch(() => {})));
+  }
+
+  // 3. Primary video: If replaced or removed, delete the old video file from R2
+  if (existing.video && data.video !== undefined && data.video !== existing.video) {
+    await deleteByUrl(existing.video).catch(() => {});
+  }
+
+  // 4. Gallery videos: Delete any video clips that were removed from the array
+  if (Array.isArray(data.videos)) {
+    const removedVideos = (existing.videos || []).filter((url) => !data.videos.includes(url));
+    await Promise.all(removedVideos.map((url) => deleteByUrl(url).catch(() => {})));
   }
 
   const { numericId: _ignore, ...safe } = data;
@@ -131,8 +143,13 @@ export async function adminDeleteProduct(numericId) {
   const doc = await Product.findOne({ numericId: Number(numericId) });
   if (!doc) throw notFound("Product not found.");
 
-  // Clean up its images so the bucket doesn't accumulate orphans.
-  const urls = [doc.image, ...(doc.images || [])].filter(Boolean);
+  // Clean up all its images and videos so the R2 bucket doesn't accumulate orphans
+  const urls = [
+    doc.image,
+    ...(doc.images || []),
+    doc.video,
+    ...(doc.videos || []),
+  ].filter(Boolean);
   await Promise.all(urls.map((url) => deleteByUrl(url).catch(() => {})));
 
   await Product.deleteOne({ numericId: Number(numericId) });
@@ -300,8 +317,8 @@ export async function adminUpdateCategory(oldSlug, data) {
   const existing = await Category.findOne({ slug: oldSlug });
   if (!existing) throw notFound("Category not found.");
  
-  // Replaced tile image → drop the old object from R2.
-  if (data.image && existing.image && data.image !== existing.image) {
+  // Replaced or cleared tile image → drop the old object from R2.
+  if (existing.image && data.image !== undefined && data.image !== existing.image) {
     await deleteByUrl(existing.image).catch(() => {});
   }
  
@@ -390,7 +407,8 @@ export async function adminUpdateBlog(numericId, data) {
   const existing = await Blog.findOne({ numericId: Number(numericId) });
   if (!existing) throw notFound("Article not found.");
 
-  if (data.image && existing.image && data.image !== existing.image) {
+  // Replaced or cleared article cover image → drop the old object from R2.
+  if (existing.image && data.image !== undefined && data.image !== existing.image) {
     await deleteByUrl(existing.image).catch(() => {});
   }
 

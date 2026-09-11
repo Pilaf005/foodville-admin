@@ -23,6 +23,7 @@ import {
   ListObjectsV2Command,
   HeadObjectCommand,
 } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "@/server/config/env";
 import { AppError, badRequest } from "@/server/utils/apiError";
 
@@ -281,3 +282,42 @@ export async function deletePrefix(prefix) {
   );
   return { deleted: objects.length };
 }
+
+/**
+ * Generate a short-lived (10 min) presigned URL for direct client-to-R2 upload.
+ * This completely bypasses Vercel/Nginx body size limits for large files (videos/images).
+ */
+export async function getPresignedUploadUrl({
+  folder = "products",
+  ownerId = "catalog",
+  ext = "mp4",
+  contentType = "video/mp4",
+  replaceUrl = null,
+}) {
+  if (!UPLOAD_FOLDERS.includes(folder)) throw badRequest("Unknown upload folder.");
+  
+  const safeExt = String(ext).toLowerCase().replace(/^\./, "") || "mp4";
+  const key = buildKey({ folder, ownerId, ext: safeExt });
+
+  const command = new PutObjectCommand({
+    Bucket: env.r2.bucket,
+    Key: key,
+    ContentType: contentType,
+    CacheControl: "public, max-age=31536000, immutable",
+  });
+
+  const uploadUrl = await getSignedUrl(r2(), command, { expiresIn: 600 });
+  const finalPublicUrl = publicUrl(key);
+
+  if (replaceUrl) {
+    const oldKey = keyFromUrl(replaceUrl);
+    if (oldKey && oldKey !== key) await deleteObject(oldKey).catch(() => {});
+  }
+
+  return {
+    uploadUrl,
+    publicUrl: finalPublicUrl,
+    key,
+  };
+}
+

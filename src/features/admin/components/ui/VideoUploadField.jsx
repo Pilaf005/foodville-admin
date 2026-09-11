@@ -96,26 +96,106 @@ export default function VideoUploadField({
       setStatusMsg("Optimizing video to HD H.264 MP4…");
       const file = await transcodeToH264(rawFile);
 
-      setStatusMsg("Uploading to cloud storage…");
+      setStatusMsg("Preparing secure direct upload…");
       setProgress(0);
 
-      const headers = {
-        "x-folder": folder || "products",
-        "x-owner-id": ownerId || "catalog",
-        "x-file-name": file.name,
-        "x-file-type": "video/mp4",
-        "content-type": "video/mp4",
-      };
-      if (value) headers["x-replace-url"] = value;
-
-      const res = await fetch("/api/uploads", {
+      const presignedRes = await fetch("/api/uploads/presigned", {
         method: "POST",
-        headers,
-        body: file,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          folder: folder || "products",
+          ownerId: ownerId || "catalog",
+          ext: "mp4",
+          contentType: "video/mp4",
+          replaceUrl: value || null,
+        }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error?.message || "Upload failed.");
-      onChange(json.data?.url || "");
+
+      if (!presignedRes.ok) {
+        const errText = await presignedRes.text();
+        let errMsg = "Failed to obtain upload authorization.";
+        try {
+          const errJson = JSON.parse(errText);
+          errMsg = errJson.message || errJson.error?.message || errMsg;
+        } catch (_) {}
+        throw new Error(errMsg);
+      }
+
+      const { data: presignedData } = await presignedRes.json();
+      const { uploadUrl, publicUrl } = presignedData;
+
+      let uploadSuccess = false;
+
+      // 1. Attempt Direct-to-R2 Presigned Upload
+      try {
+        await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("PUT", uploadUrl, true);
+          xhr.setRequestHeader("Content-Type", "video/mp4");
+
+          xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+              const percent = Math.round((event.loaded / event.total) * 100);
+              setProgress(percent);
+            }
+          };
+
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              uploadSuccess = true;
+              resolve();
+            } else {
+              reject(new Error(`Direct cloud upload failed (HTTP ${xhr.status}).`));
+            }
+          };
+
+          xhr.onerror = () => {
+            reject(new Error("CORS or network error during direct cloud upload."));
+          };
+          xhr.send(file);
+        });
+
+        onChange(publicUrl);
+      } catch (directErr) {
+        console.warn("[video-upload] Direct R2 upload failed, attempting server relay fallback:", directErr?.message);
+        
+        // 2. Fallback to Server Relay (/api/uploads)
+        setStatusMsg("Relaying upload via server…");
+        setProgress(0);
+
+        const fallbackHeaders = {
+          "x-folder": folder || "products",
+          "x-owner-id": ownerId || "catalog",
+          "x-file-name": file.name,
+          "x-file-type": "video/mp4",
+          "content-type": "video/mp4",
+        };
+        if (value) fallbackHeaders["x-replace-url"] = value;
+
+        const serverRes = await fetch("/api/uploads", {
+          method: "POST",
+          headers: fallbackHeaders,
+          body: file,
+        });
+
+        if (!serverRes.ok) {
+          const errText = await serverRes.text();
+          let serverErrMsg = "Upload failed.";
+          try {
+            const errJson = JSON.parse(errText);
+            serverErrMsg = errJson.message || errJson.error?.message || serverErrMsg;
+          } catch (_) {
+            if (errText.includes("Request Entity Too Large") || serverRes.status === 413) {
+              serverErrMsg = "Video file is too large for the web server proxy. Please enable CORS in your Cloudflare R2 bucket settings (see instructions) or paste a video URL directly using '+ Add via URL'.";
+            }
+          }
+          throw new Error(serverErrMsg);
+        }
+
+        const serverJson = await serverRes.json();
+        onChange(serverJson.data?.url || "");
+      }
+
       setStatusMsg("");
     } catch (err) {
       console.error("[video-upload-error]", err);
