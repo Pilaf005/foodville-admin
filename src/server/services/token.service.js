@@ -42,7 +42,7 @@ export function authCookieOptions() {
   return {
     httpOnly: true,
     secure: env.isProd,
-    sameSite: "strict",
+    sameSite: "lax",
     path: "/",
     maxAge: expiresInSeconds(),
   };
