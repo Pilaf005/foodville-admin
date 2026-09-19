@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAdminCategories, useAdminMutations, useAdminProducts } from "@/features/admin/hooks/useAdmin";
-import ImageUploadField from "@/features/admin/components/ui/ImageUploadField";
+import MultiImageUpload from "@/features/admin/components/ui/MultiImageUpload";
 import VideoUploadField from "@/features/admin/components/ui/VideoUploadField";
 import { toast } from "sonner";
  
@@ -20,6 +20,8 @@ const EMPTY = {
   price: "", mrp: "", stock: "", unit: "100g", brand: "Foodville", tags: "",
   isComingSoon: false,
   image: "", images: [],
+  // Unified image gallery state (UI only — split back to image/images on save)
+  allImages: [], primaryIndex: 0,
   video: "", videos: [], showInReels: false,
   units: [],
   comboIncludes: [],
@@ -62,10 +64,15 @@ export default function ProductForm({ product, isNew }) {
 
   const [form, setForm] = useState(() => {
     if (isNew) return EMPTY;
+    const existingImages = Array.isArray(product?.images) ? product.images : (product?.images ? [product.images] : []);
+    const allImages = [product?.image, ...existingImages].filter(Boolean);
     return {
       ...EMPTY, ...product,
       tags:   Array.isArray(product?.tags)   ? product.tags.join(", ") : (product?.tags ?? ""),
-      images: Array.isArray(product?.images) ? product.images : (product?.images ? [product.images] : []),
+      images: existingImages,
+      // Unified gallery state
+      allImages,
+      primaryIndex: 0,  // product.image is always first = primary
       video:  product?.video || "",
       videos: Array.isArray(product?.videos) ? product.videos : (product?.video ? [product.video] : []),
       showInReels: !!product?.showInReels,
@@ -119,6 +126,10 @@ export default function ProductForm({ product, isNew }) {
 
     const firstUnit = parsedUnits[0];
 
+    // Split unified gallery state back to schema fields
+    const primaryImage = (form.allImages || [])[form.primaryIndex] || "";
+    const extraImages  = (form.allImages || []).filter((_, i) => i !== form.primaryIndex);
+
     const payload = {
       ...form,
       slug: form.slug || slugify(form.name),
@@ -127,7 +138,12 @@ export default function ProductForm({ product, isNew }) {
       unit:   firstUnit.unit,
       stock:  Number(form.stock),
       tags:   form.tags.split(",").map((t) => t.trim()).filter(Boolean),
-      images: form.images.map((u) => u.trim()).filter(Boolean),
+      // Image fields — split from unified gallery state
+      image:  primaryImage,
+      images: extraImages,
+      // Strip UI-only fields before sending to API
+      allImages:    undefined,
+      primaryIndex: undefined,
       video:  (form.video || "").trim(),
       videos: (form.videos || []).map((v) => v.trim()).filter(Boolean),
       showInReels: !!form.showInReels,
@@ -537,54 +553,17 @@ export default function ProductForm({ product, isNew }) {
         </Section>
       )}
 
-      {/* Images */}
-      <Section title="Images">
-        <ImageUploadField
-          label="Primary Image"
-          required
-          value={form.image}
-          onChange={(v) => set("image", v)}
+      {/* Product Images */}
+      <Section title="Product Images">
+        <MultiImageUpload
+          images={form.allImages || []}
+          primaryIndex={form.primaryIndex ?? 0}
+          ownerId={form.slug || "catalog"}
+          onChange={({ images: imgs, primaryIndex: pi }) => {
+            set("allImages", imgs);
+            set("primaryIndex", pi);
+          }}
         />
-        <div className="space-y-4">
-          <ImageUploadField
-            label="Additional Images"
-            value=""
-            previewSize="sm"
-            onChange={(url) => {
-              if (url) {
-                set("images", [...form.images.filter(Boolean), url]);
-              }
-            }}
-          />
- 
-          {form.images.filter(Boolean).length > 0 && (
-            <div className="space-y-2">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                Uploaded Additional Images ({form.images.filter(Boolean).length})
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                {form.images.filter(Boolean).map((url, idx) => (
-                  <div key={idx} className="relative group rounded-xl overflow-hidden border border-gray-200 bg-gray-50 aspect-square flex flex-col justify-between shadow-sm animate-fade-in">
-                    <img src={url} alt={`Extra ${idx + 1}`} className="w-full h-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const nextImages = form.images.filter((_, i) => i !== idx);
-                        set("images", nextImages);
-                      }}
-                      className="absolute top-1.5 right-1.5 p-1.5 bg-white/90 hover:bg-red-50 text-red-500 rounded-lg shadow-md transition hover:scale-105 active:scale-95 cursor-pointer"
-                      title="Remove Image"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                      </svg>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
       </Section>
 
       {/* Product Video */}
