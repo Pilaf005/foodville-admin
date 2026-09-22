@@ -17,8 +17,8 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https://*.r2.dev https://pub-*.r2.dev https://images.unsplash.com https://plus.unsplash.com",
-      // blob: needed for FFmpeg WASM worker; https://*.r2.dev for video streaming
-      "connect-src 'self' blob: https://nominatim.openstreetmap.org https://*.r2.dev https://pub-*.r2.dev",
+      // blob: needed for FFmpeg WASM worker; https://*.r2.dev for video streaming; https://*.r2.cloudflarestorage.com for presigned PUT uploads
+      "connect-src 'self' blob: https://nominatim.openstreetmap.org https://*.r2.dev https://pub-*.r2.dev https://*.r2.cloudflarestorage.com",
       // R2 video URLs need media-src permission for <video> tags
       "media-src 'self' blob: https://*.r2.dev https://pub-*.r2.dev",
       // worker-src blob: needed for FFmpeg WASM worker thread
