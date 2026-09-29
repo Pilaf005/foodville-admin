@@ -77,6 +77,7 @@ class EnvConfig {
 
         // Email / SMTP
         emailDevMode: parseBool(process.env.EMAIL_DEV_MODE, false),
+        resendApiKey: process.env.RESEND_API_KEY || "",
         smtp: {
           host: process.env.SMTP_HOST,
           port: parseIntVar(process.env.SMTP_PORT, 587),
@@ -115,6 +116,7 @@ class EnvConfig {
   get r2() { return this.all.r2; }
   get smtp() { return this.all.smtp; }
   get emailDevMode() { return this.all.emailDevMode; }
+  get resendApiKey() { return this.all.resendApiKey; }
   get isProd() { return this.all.isProd; }
   get isDev() { return this.all.isDev; }
   get siteUrl() { return this.all.siteUrl; }

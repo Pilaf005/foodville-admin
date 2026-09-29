@@ -1,29 +1,24 @@
 /**
- * Transactional email via Nodemailer/SMTP (Gmail).
+ * Transactional email via Resend API.
  *
  * Behaviour:
- *  - EMAIL_DEV_MODE=true (or no SMTP_HOST): the code is printed to the server
- *    console instead of emailed — handy for local testing.
- *  - Otherwise it sends for real. If sending fails outside production we fall
- *    back to logging the code so local development is never blocked; in
- *    production a failure is surfaced as a proper error.
+ *  - EMAIL_DEV_MODE=true (or no RESEND_API_KEY): the code is printed to the
+ *    server console instead of emailed — handy for local testing.
+ *  - Otherwise it sends for real via Resend HTTP API (works on Vercel/serverless).
+ *  - If sending fails outside production we fall back to logging the code;
+ *    in production a failure is surfaced as a proper error.
  */
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import { env } from "@/server/config/env";
 import { AppError } from "@/server/utils/apiError";
 
-let transporter = null;
+let resendClient = null;
 
-function getTransporter() {
-  if (transporter) return transporter;
-  if (!env.smtp.host) return null;
-  transporter = nodemailer.createTransport({
-    host: env.smtp.host,
-    port: env.smtp.port,
-    secure: env.smtp.secure, // true => 465, false => 587 (STARTTLS)
-    auth: env.smtp.user ? { user: env.smtp.user, pass: env.smtp.pass } : undefined,
-  });
-  return transporter;
+function getResend() {
+  if (resendClient) return resendClient;
+  if (!env.resendApiKey) return null;
+  resendClient = new Resend(env.resendApiKey);
+  return resendClient;
 }
 
 function logCode(to, code, why) {
@@ -55,26 +50,27 @@ function otpEmailHtml(code, minutes) {
 
 export async function sendOtpEmail({ to, code, expiresInMinutes }) {
   // Dev/console mode
-  if (env.emailDevMode || !env.smtp.host) {
+  if (env.emailDevMode || !env.resendApiKey) {
     logCode(to, code, "EMAIL_DEV_MODE — not emailed");
     return { delivered: false, dev: true };
   }
 
   try {
-    const t = getTransporter();
-    await t.sendMail({
-      from: env.smtp.from,
+    const resend = getResend();
+    const { error } = await resend.emails.send({
+      from: env.smtp.from || "Foodville <support@foodvilleindia.com>",
       to,
       subject: `${code} is your Foodville verification code`,
       text: `Your Foodville verification code is ${code}. It expires in ${expiresInMinutes} minutes.`,
       html: otpEmailHtml(code, expiresInMinutes),
     });
+    if (error) throw new Error(error.message);
     return { delivered: true };
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error("[email] SMTP send failed:", err?.message);
+    console.error("[email] Resend send failed:", err?.message);
     if (!env.isProd) {
-      logCode(to, code, "SMTP failed — dev fallback");
+      logCode(to, code, "Resend failed — dev fallback");
       return { delivered: false, dev: true };
     }
     throw new AppError(
@@ -225,7 +221,7 @@ export async function sendExportResponseEmail({
   const plainText = `Inquiry Reference: ${inquiryId}\n\nDear ${recipientName || "Valued Trade Partner"},\n\n${messageText}\n\n---\nFoodville Global Export Desk\nFoodville Consumer Products Private Limited\nsupport@foodvilleindia.com | +91 9911575605`;
 
   // Dev/console mode
-  if (env.emailDevMode || !env.smtp.host) {
+  if (env.emailDevMode || !env.resendApiKey) {
     // eslint-disable-next-line no-console
     console.log(
       `\n────────────────────────────────────────────────────────────\n📧  [DEV EXPORT EMAIL] To: ${to}\n    Subject: ${subject}\n    Inquiry: ${inquiryId}\n    Message:\n${messageText}\n────────────────────────────────────────────────────────────\n`
@@ -234,25 +230,26 @@ export async function sendExportResponseEmail({
   }
 
   try {
-    const t = getTransporter();
-    await t.sendMail({
-      from: env.smtp.from,
+    const resend = getResend();
+    const { error } = await resend.emails.send({
+      from: env.smtp.from || "Foodville <support@foodvilleindia.com>",
       to,
       subject: subject || `Foodville Export Inquiry Response - [${inquiryId}]`,
       text: plainText,
       html,
     });
+    if (error) throw new Error(error.message);
     return { delivered: true };
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error("[email] Export response SMTP send failed:", err?.message);
+    console.error("[email] Export response Resend send failed:", err?.message);
     if (!env.isProd) {
       // eslint-disable-next-line no-console
-      console.log(`[email] SMTP failed in non-prod, logged to console for ${to}`);
+      console.log(`[email] Resend failed in non-prod, logged to console for ${to}`);
       return { delivered: false, dev: true };
     }
     throw new AppError(
-      "We couldn't send the export response email. Please verify SMTP settings.",
+      "We couldn't send the export response email. Please verify email settings.",
       502,
       "EMAIL_SEND_FAILED"
     );
@@ -352,7 +349,7 @@ export async function sendDistributorResponseEmail({
 
   const plainText = `Application Reference: ${applicationId}\n\nDear ${recipientName || "Valued Trade Partner"},\n\n${messageText}\n\n---\nFoodville Channel Distribution Desk\nFoodville Consumer Products Private Limited\nsupport@foodvilleindia.com | +91 9911575605`;
 
-  if (env.emailDevMode || !env.smtp.host) {
+  if (env.emailDevMode || !env.resendApiKey) {
     // eslint-disable-next-line no-console
     console.log(
       `\n────────────────────────────────────────────────────────────\n📧  [DEV DISTRIBUTOR EMAIL] To: ${to}\n    Subject: ${subject}\n    Application: ${applicationId}\n    Message:\n${messageText}\n────────────────────────────────────────────────────────────\n`
@@ -361,25 +358,26 @@ export async function sendDistributorResponseEmail({
   }
 
   try {
-    const t = getTransporter();
-    await t.sendMail({
-      from: env.smtp.from,
+    const resend = getResend();
+    const { error } = await resend.emails.send({
+      from: env.smtp.from || "Foodville <support@foodvilleindia.com>",
       to,
       subject: subject || `Foodville FMCG Distributorship - Application [${applicationId}]`,
       text: plainText,
       html,
     });
+    if (error) throw new Error(error.message);
     return { delivered: true };
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error("[email] Distributor response SMTP send failed:", err?.message);
+    console.error("[email] Distributor response Resend send failed:", err?.message);
     if (!env.isProd) {
       // eslint-disable-next-line no-console
-      console.log(`[email] SMTP failed in non-prod, logged to console for ${to}`);
+      console.log(`[email] Resend failed in non-prod, logged to console for ${to}`);
       return { delivered: false, dev: true };
     }
     throw new AppError(
-      "We couldn't send the distributor response email. Please verify SMTP settings.",
+      "We couldn't send the distributor response email. Please verify email settings.",
       502,
       "EMAIL_SEND_FAILED"
     );
