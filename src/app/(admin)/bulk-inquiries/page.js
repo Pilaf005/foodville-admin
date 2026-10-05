@@ -159,7 +159,20 @@ export default function BulkInquiriesPage() {
                       <div className="font-bold text-gray-950">{item.fullName}</div>
                       <div className="text-[10px] text-gray-400 mt-0.5">{item.companyName || "Individual Buyer"}</div>
                     </td>
-                    <td className="px-6 py-4">{item.productName}</td>
+                    <td className="px-6 py-4">
+                      {item.items && item.items.length > 1 ? (
+                        <div>
+                          <div className="font-bold text-gray-950">{item.items[0].productName}</div>
+                          <span className="inline-block mt-0.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                            +{item.items.length - 1} more products
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="font-bold text-gray-950">
+                          {item.items?.[0]?.productName || item.productName}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-6 py-4 text-center text-emerald-600 font-black">{item.quantityKg} kg</td>
                     <td className="px-6 py-4">
                       <div className="font-bold text-gray-950">{item.deliveryCity ? `${item.deliveryCity}${item.deliveryState ? `, ${item.deliveryState}` : ""}` : item.deliveryPincode}</div>
@@ -201,8 +214,8 @@ export default function BulkInquiriesPage() {
 
       {/* Review Lead Modal */}
       {selectedInquiry && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 space-y-6 shadow-2xl border border-gray-100 animate-slideUp">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-6 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 space-y-6 shadow-2xl border border-gray-100 my-auto max-h-[90vh] overflow-y-auto animate-slideUp">
             <div className="flex items-center justify-between border-b border-gray-100 pb-4">
               <div>
                 <span className="text-[10px] font-bold text-gray-400 font-mono tracking-wide">{selectedInquiry.inquiryId}</span>
@@ -261,11 +274,43 @@ export default function BulkInquiriesPage() {
                   )}
                 </p>
               </div>
-              <div className="col-span-2 border-t pt-2 mt-2">
-                <p className="text-[10px] text-gray-400 font-black uppercase">Quotation Item & Volume</p>
-                <p className="text-emerald-700 font-black text-sm mt-1">
-                  {selectedInquiry.productName} ({selectedInquiry.quantityKg} kg)
+              <div className="col-span-2 border-t pt-3 mt-1">
+                <p className="text-[10px] text-gray-400 font-black uppercase mb-2">
+                  Quotation Products &amp; Volumes (
+                  {selectedInquiry.items?.length || 1} {selectedInquiry.items?.length === 1 ? "item" : "items"})
                 </p>
+                {selectedInquiry.items && selectedInquiry.items.length > 0 ? (
+                  <div className="border border-gray-200 rounded-xl overflow-hidden">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="bg-gray-100/70 border-b border-gray-200 text-[10px] text-gray-500 uppercase tracking-wider">
+                          <th className="px-3 py-2 font-bold">Product</th>
+                          <th className="px-3 py-2 text-right font-bold">Quantity</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {selectedInquiry.items.map((it, i) => (
+                          <tr key={i} className="hover:bg-gray-50">
+                            <td className="px-3 py-2 font-semibold text-gray-900">{it.productName}</td>
+                            <td className="px-3 py-2 text-right font-black text-emerald-700">{it.quantityKg} kg</td>
+                          </tr>
+                        ))}
+                        <tr className="bg-gray-50 font-bold border-t border-gray-200">
+                          <td className="px-3 py-2 text-gray-700">Total Volume</td>
+                          <td className="px-3 py-2 text-right text-emerald-800 font-black">
+                            {selectedInquiry.quantityKg ||
+                              selectedInquiry.items.reduce((sum, it) => sum + (it.quantityKg || 0), 0)}{" "}
+                            kg
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-emerald-700 font-black text-sm mt-1">
+                    {selectedInquiry.productName} ({selectedInquiry.quantityKg} kg)
+                  </p>
+                )}
               </div>
             </div>
 

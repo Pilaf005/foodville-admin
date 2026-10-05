@@ -8,8 +8,14 @@ const BulkInquirySchema = new mongoose.Schema(
     gstin: { type: String, trim: true, default: "" },
     email: { type: String, required: true, lowercase: true, trim: true },
     phone: { type: String, required: true, trim: true },
-    productName: { type: String, required: true, trim: true },
-    quantityKg: { type: Number, required: true },
+    items: [
+      {
+        productName: { type: String, required: true, trim: true },
+        quantityKg: { type: Number, required: true },
+      },
+    ],
+    productName: { type: String, trim: true, default: "" },
+    quantityKg: { type: Number, default: 0 },
     deliveryAddress: { type: String, trim: true, default: "" },
     deliveryCity:    { type: String, trim: true, default: "" },
     deliveryState:   { type: String, trim: true, default: "" },
