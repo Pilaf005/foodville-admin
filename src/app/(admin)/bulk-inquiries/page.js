@@ -161,7 +161,10 @@ export default function BulkInquiriesPage() {
                     </td>
                     <td className="px-6 py-4">{item.productName}</td>
                     <td className="px-6 py-4 text-center text-emerald-600 font-black">{item.quantityKg} kg</td>
-                    <td className="px-6 py-4">{item.deliveryPincode}</td>
+                    <td className="px-6 py-4">
+                      <div className="font-bold text-gray-950">{item.deliveryCity ? `${item.deliveryCity}${item.deliveryState ? `, ${item.deliveryState}` : ""}` : item.deliveryPincode}</div>
+                      {item.deliveryCity && <div className="text-[10px] text-gray-400 mt-0.5 font-mono">{item.deliveryPincode}</div>}
+                    </td>
                     <td className="px-6 py-4">
                       <span
                         className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
@@ -240,9 +243,23 @@ export default function BulkInquiriesPage() {
                 <p className="text-[10px] text-gray-400 font-black uppercase">GSTIN</p>
                 <p className="text-gray-950 mt-1">{selectedInquiry.gstin || "N/A"}</p>
               </div>
-              <div>
-                <p className="text-[10px] text-gray-400 font-black uppercase">Destination Pincode</p>
-                <p className="text-gray-950 mt-1">{selectedInquiry.deliveryPincode}</p>
+              <div className="col-span-2">
+                <p className="text-[10px] text-gray-400 font-black uppercase">Delivery Address & Destination</p>
+                <p className="text-gray-950 mt-1 leading-relaxed">
+                  {selectedInquiry.deliveryAddress ? (
+                    <>
+                      <span>{selectedInquiry.deliveryAddress}</span>
+                      <br />
+                      <span>
+                        {[selectedInquiry.deliveryCity, selectedInquiry.deliveryState].filter(Boolean).join(", ")}
+                        {" - "}
+                        <strong className="font-mono">{selectedInquiry.deliveryPincode}</strong>
+                      </span>
+                    </>
+                  ) : (
+                    <span>Pincode: <strong className="font-mono">{selectedInquiry.deliveryPincode}</strong></span>
+                  )}
+                </p>
               </div>
               <div className="col-span-2 border-t pt-2 mt-2">
                 <p className="text-[10px] text-gray-400 font-black uppercase">Quotation Item & Volume</p>

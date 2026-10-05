@@ -10,6 +10,9 @@ const BulkInquirySchema = new mongoose.Schema(
     phone: { type: String, required: true, trim: true },
     productName: { type: String, required: true, trim: true },
     quantityKg: { type: Number, required: true },
+    deliveryAddress: { type: String, trim: true, default: "" },
+    deliveryCity:    { type: String, trim: true, default: "" },
+    deliveryState:   { type: String, trim: true, default: "" },
     deliveryPincode: { type: String, required: true, trim: true },
     notes: { type: String, default: "" },
     status: {
